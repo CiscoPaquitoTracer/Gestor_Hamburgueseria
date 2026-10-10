@@ -5,9 +5,13 @@ build/
 
 # Local configuration file (sdk path, etc)
 local.properties
+gradle/gradle-daemon-jvm.properties
 
 # Log/OS Files
 *.log
+.DS_Store
+Thumbs.db
+ehthumbs.db
 
 # Android Studio generated files and folders
 captures/
@@ -15,7 +19,14 @@ captures/
 .cxx/
 *.aab
 *.apk
+*.apks
 output-metadata.json
+
+# Generated files
+bin/
+gen/
+out/
+.navigation/
 
 # IntelliJ
 *.iml
