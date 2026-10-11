@@ -11,7 +11,7 @@ kotlin = "2.2.10"
 ksp = "2.3.9"
 composeBom = "2026.02.01"
 credentials = "1.6.0"
-googleId = "1.2.1"
+googleId = "1.2.0"
 room = "2.8.4"
 navigationCompose = "2.10.1"
 
