@@ -31,7 +31,7 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: gradle/actions/setup-gradle@v4
+      - uses: gradle/actions/setup-gradle@v6
         with:
           cache-read-only: true
       - uses: github/codeql-action/init@v3
@@ -105,4 +105,4 @@ jobs:
         with:
           distribution: temurin
           java-version: 21
-      - uses: gradle/actions/dependency-submission@v4
+      - uses: gradle/actions/dependency-submission@v6
