@@ -45,7 +45,7 @@ jobs:
 
       - name: Subir reportes
         if: always()
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: reportes
           path: |
@@ -54,7 +54,7 @@ jobs:
           retention-days: 14
 
       - name: Subir APK debug
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v7
         with:
           name: apk-debug
           path: app/build/outputs/apk/debug/*.apk
