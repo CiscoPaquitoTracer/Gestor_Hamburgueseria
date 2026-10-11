@@ -130,7 +130,11 @@ Esto **no sustituye** un pentest manual. Antes de publicar en Play Store convien
 **Versionamiento:**
 - **Dependencias:** todas están en `libs.versions.toml` y Dependabot propone las actualizaciones. Un PR de Dependabot se mezcla solo si CI y Seguridad pasan en verde.
 - **App:** se usa [SemVer](https://semver.org/lang/es/) en `versionName` (`MAYOR.MENOR.PARCHE`) dentro de `app/build.gradle.kts`, y `versionCode` sube en 1 con cada versión que se instala. Cada versión publicada se marca con un tag `vX.Y.Z`.
-- **Ramas:** `main` siempre compila. El trabajo se hace en ramas (`feature/ventas`, `fix/login`, …) y entra por PR. Se recomienda activar en GitHub *Settings → Branches* una regla que exija que CI pase antes de mezclar.
+- **Ramas:**
+  ```
+  main  ◄── PR ──  develop  ◄── PR ──  francisco (y otras ramas personales)
+  ```
+  `main` es lo estable (lo que se instala en los teléfonos) y `develop` es donde se integra el trabajo. Cada persona trabaja en su rama, que sale de `develop`, y entra a `develop` por PR. Cuando `develop` está estable, se abre un PR de `develop` a `main`. Ambas ramas están protegidas: solo aceptan cambios por PR y con CI en verde. Los PRs de Dependabot llegan a `develop`.
 
 ## 7. Siguientes pasos sugeridos
 

@@ -8,9 +8,9 @@ name: Seguridad
 
 on:
   push:
-    branches: [main]
+    branches: [main, develop]
   pull_request:
-    branches: [main]
+    branches: [main, develop]
   schedule:
     - cron: "0 12 * * 1" # cada lunes, para detectar vulnerabilidades nuevas en código viejo
   workflow_dispatch:

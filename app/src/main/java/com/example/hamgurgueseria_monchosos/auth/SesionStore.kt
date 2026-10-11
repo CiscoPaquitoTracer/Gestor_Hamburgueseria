@@ -8,7 +8,7 @@ import kotlinx.coroutines.flow.asStateFlow
 
 data class Usuario(val nombre: String, val correo: String, val fotoUrl: String? = null)
 
-/** Recuerda quiÃ©n iniciÃ³ sesiÃ³n para no pedir Google cada vez que se abre la app. */
+/** Recuerda quién inició sesión para no pedir Google cada vez que se abre la app. */
 class SesionStore(context: Context) {
     private val prefs = context.getSharedPreferences("sesion", Context.MODE_PRIVATE)
 
