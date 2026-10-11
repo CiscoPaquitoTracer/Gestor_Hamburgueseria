@@ -83,10 +83,23 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
+      - name: Comprobar disponibilidad del grafo de dependencias
+        id: dependency-graph
+        run: |
+          if curl --silent --show-error --fail \
+            --header "Accept: application/vnd.github+json" \
+            "${{ github.api_url }}/repos/${{ github.repository }}/dependency-graph/sbom" >/dev/null; then
+            echo "available=true" >>"$GITHUB_OUTPUT"
+          else
+            echo "available=false" >>"$GITHUB_OUTPUT"
+            echo "Dependency Graph no está disponible; se omite la revisión de dependencias."
+          fi
       - uses: actions/dependency-review-action@v4
+        if: steps.dependency-graph.outputs.available == 'true'
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure
