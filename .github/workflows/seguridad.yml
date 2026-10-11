@@ -1,0 +1,108 @@
+# Pruebas de seguridad automáticas (no sustituyen un pentest manual, pero cubren lo básico):
+#   - CodeQL:            análisis estático del código Kotlin (SAST).
+#   - mobsfscan:         reglas de seguridad específicas de apps Android (MobSF).
+#   - Gitleaks:          busca contraseñas, tokens o llaves subidas por error.
+#   - Dependency review: bloquea PRs que agregan librerías con vulnerabilidades conocidas.
+# Los hallazgos aparecen en la pestaña "Security" del repositorio.
+name: Seguridad
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  schedule:
+    - cron: "0 12 * * 1" # cada lunes, para detectar vulnerabilidades nuevas en código viejo
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  codeql:
+    name: CodeQL (Kotlin)
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          cache-read-only: true
+      - uses: github/codeql-action/init@v3
+        with:
+          languages: java-kotlin
+          build-mode: manual
+          queries: security-and-quality
+      # CodeQL necesita ver la compilación real: sin caché, sin daemon, compilador Kotlin en proceso.
+      - name: Compilar para CodeQL
+        run: >
+          ./gradlew assembleDebug --no-daemon --no-build-cache --no-configuration-cache
+          -Pkotlin.compiler.execution.strategy=in-process
+      - uses: github/codeql-action/analyze@v3
+        with:
+          category: "/language:java-kotlin"
+
+  mobsfscan:
+    name: MobSF (seguridad Android)
+    runs-on: ubuntu-latest
+    permissions:
+      security-events: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Ejecutar mobsfscan
+        run: |
+          pip install mobsfscan
+          mobsfscan --sarif --output mobsfscan.sarif . || true
+      - uses: github/codeql-action/upload-sarif@v3
+        with:
+          sarif_file: mobsfscan.sarif
+          category: mobsfscan
+
+  secretos:
+    name: Gitleaks (secretos filtrados)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: gitleaks/gitleaks-action@v2
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+  dependencias:
+    name: Revisión de dependencias
+    if: github.event_name == 'pull_request'
+    runs-on: ubuntu-latest
+    permissions:
+      pull-requests: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/dependency-review-action@v4
+        with:
+          fail-on-severity: high
+          comment-summary-in-pr: on-failure
+
+  # Envía el árbol de dependencias de Gradle a GitHub para que Dependabot
+  # pueda avisar de vulnerabilidades también en dependencias transitivas.
+  grafo-dependencias:
+    name: Enviar grafo de dependencias
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+      - uses: gradle/actions/dependency-submission@v4

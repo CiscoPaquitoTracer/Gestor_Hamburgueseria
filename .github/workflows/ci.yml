@@ -1,0 +1,61 @@
+# Integración continua: en cada push o PR a main compila, corre pruebas y lint.
+# Si algo falla, el PR queda marcado en rojo y no debería mezclarse.
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build:
+    name: Compilar, probar y lint
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 21
+
+      - uses: gradle/actions/setup-gradle@v4
+
+      - name: Pruebas unitarias
+        run: ./gradlew testDebugUnitTest
+
+      - name: Lint de Android
+        run: ./gradlew lintDebug
+
+      - name: Compilar APK debug
+        run: ./gradlew assembleDebug
+
+      - name: Compilar release (verifica reglas de R8)
+        run: ./gradlew assembleRelease
+
+      - name: Subir reportes
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: reportes
+          path: |
+            app/build/reports/
+            app/build/test-results/
+          retention-days: 14
+
+      - name: Subir APK debug
+        uses: actions/upload-artifact@v4
+        with:
+          name: apk-debug
+          path: app/build/outputs/apk/debug/*.apk
+          retention-days: 14

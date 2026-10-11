@@ -5,43 +5,44 @@ import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
-import androidx.compose.material3.Scaffold
-import androidx.compose.material3.Text
-import androidx.compose.runtime.Composable
+import androidx.compose.material3.Surface
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.tooling.preview.Preview
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.example.hamgurgueseria_monchosos.auth.GoogleAuthClient
+import com.example.hamgurgueseria_monchosos.ui.login.LoginScreen
+import com.example.hamgurgueseria_monchosos.ui.navegacion.AppPrincipal
 import com.example.hamgurgueseria_monchosos.ui.theme.HamgurgueseriamonchososTheme
+import kotlinx.coroutines.launch
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        val app = application as HamburgueseriaApp
+
         setContent {
             HamgurgueseriamonchososTheme {
-                Scaffold(modifier = Modifier.fillMaxSize()) { innerPadding ->
-                    Greeting(
-                        name = "Android",
-                        modifier = Modifier.padding(innerPadding)
-                    )
+                Surface(Modifier.fillMaxSize()) {
+                    val usuario by app.sesion.usuario.collectAsStateWithLifecycle()
+                    val scope = rememberCoroutineScope()
+
+                    val actual = usuario
+                    if (actual == null) {
+                        LoginScreen(onSesionIniciada = app.sesion::iniciar)
+                    } else {
+                        AppPrincipal(
+                            usuario = actual,
+                            repo = app.inventario,
+                            onCerrarSesion = {
+                                scope.launch { GoogleAuthClient(this@MainActivity).cerrarSesion() }
+                                app.sesion.cerrar()
+                            },
+                        )
+                    }
                 }
             }
         }
-    }
-}
-
-@Composable
-fun Greeting(name: String, modifier: Modifier = Modifier) {
-    Text(
-        text = "Hello $name!",
-        modifier = modifier
-    )
-}
-
-@Preview(showBackground = true)
-@Composable
-fun GreetingPreview() {
-    HamgurgueseriamonchososTheme {
-        Greeting("Android")
     }
 }
