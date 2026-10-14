@@ -50,3 +50,6 @@ google-services.json
 keystore.properties
 .gradle-home/
 infra/jenkins/.env
+
+# Documentacion local (no se sube)
+Documentacion_Monchosos.docx
