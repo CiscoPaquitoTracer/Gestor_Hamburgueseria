@@ -93,8 +93,13 @@ class GoogleAuthClient(private val context: Context, private val supabase: Supab
     }
 
     private fun nonceAleatorio(): String =
-        ByteArray(32).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
+        ByteArray(32).also { aleatorio.nextBytes(it) }.joinToString("") { "%02x".format(it) }
 
     private fun sha256(texto: String): String =
         MessageDigest.getInstance("SHA-256").digest(texto.toByteArray()).joinToString("") { "%02x".format(it) }
+
+    private companion object {
+        /** Una sola instancia para toda la app (recomendación de CodeQL). */
+        val aleatorio = SecureRandom()
+    }
 }
