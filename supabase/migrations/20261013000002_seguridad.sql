@@ -12,10 +12,26 @@
 -- SECURITY DEFINER para poder leer usuarios_permitidos sin depender de sus políticas.
 CREATE FUNCTION es_usuario_permitido() RETURNS boolean
 LANGUAGE sql STABLE SECURITY DEFINER SET search_path = public AS $$
-    SELECT EXISTS (
-        SELECT 1 FROM public.usuarios_permitidos
-         WHERE correo = lower(coalesce(auth.jwt() ->> 'email', ''))
+    WITH claims AS (
+        SELECT
+            lower(coalesce(auth.jwt() ->> 'email', '')) AS email,
+            coalesce(auth.jwt() -> 'app_metadata' ->> 'provider', '') AS provider,
+            (
+                coalesce(auth.jwt() ->> 'email_confirmed_at', '') <> ''
+                OR lower(coalesce(auth.jwt() -> 'user_metadata' ->> 'email_verified', 'false')) = 'true'
+                OR lower(coalesce(auth.jwt() -> 'app_metadata' ->> 'email_verified', 'false')) = 'true'
+            ) AS email_verified
     )
+    SELECT
+        c.email <> ''
+        AND c.provider = 'google'
+        AND c.email_verified
+        AND EXISTS (
+            SELECT 1
+              FROM public.usuarios_permitidos up
+             WHERE up.correo = c.email
+        )
+    FROM claims c
 $$;
 
 -- Activa RLS y una política "todo para el equipo" en cada tabla de negocio.
