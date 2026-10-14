@@ -42,40 +42,47 @@ Los botones − / + mueven **1 pieza** o **0.5 kg**. Para ajustes exactos, se to
 
 - **Kotlin** + **Jetpack Compose** (Material 3), un solo módulo `:app`.
 - **minSdk 24**, target/compile **37**, AGP 9, Gradle 9.
-- **Room** (SQLite) para guardar datos en el teléfono; KSP genera el código.
-- **Credential Manager** + `googleid` para el inicio de sesión con Google.
-- **Navigation Compose** para la barra inferior (Inicio / Inventario).
+- **Supabase** (PostgreSQL en la nube) con [supabase-kt](https://github.com/supabase-community/supabase-kt): Auth + Postgrest sobre Ktor/OkHttp, con kotlinx-serialization. **Necesita internet.**
+- **Credential Manager** + `googleid` para el inicio de sesión con Google; el token se entrega a Supabase Auth.
+- **Navigation Compose** para la barra inferior (Inicio / Pedidos / Inventario).
 - Versiones centralizadas en [`gradle/libs.versions.toml`](gradle/libs.versions.toml). **No escribas versiones directamente en `build.gradle.kts`.**
 
 ### Estructura
 
 ```
 app/src/main/java/com/example/hamgurgueseria_monchosos/
-├── HamburgueseriaApp.kt        # Application: crea la BD, el repositorio y la sesión (inyección manual)
-├── MainActivity.kt             # Sin sesión → Login; con sesión → AppPrincipal
+├── HamburgueseriaApp.kt        # Application: crea el cliente de Supabase, la sesión y los repositorios
+├── MainActivity.kt             # Cargando → Login → AppPrincipal según la sesión de Supabase
 ├── auth/
-│   ├── GoogleAuthClient.kt     # Botón de Google (Credential Manager) + lista de correos permitidos
-│   └── SesionStore.kt          # Guarda nombre y correo del usuario en SharedPreferences
+│   ├── GoogleAuthClient.kt     # Google (Credential Manager, con nonce) → Supabase Auth; revisa usuarios_permitidos
+│   └── Sesion.kt               # Traduce la sesión de Supabase a EstadoSesion/Usuario
 ├── data/
-│   ├── Insumo.kt               # Entidad + enums Unidad/Categoria + formateo
-│   ├── InsumoDao.kt            # Consultas Room
-│   ├── AppDatabase.kt
-│   └── InventarioRepository.kt # Única puerta a los datos (aquí se conectaría la nube)
+│   ├── remoto/Supabase.kt      # Cliente, mensajes de error, conversiones de fechas y dinero
+│   ├── menu/                   # Menú (catálogo de la app) y armarRenglon (valida combos, sabores, variantes)
+│   ├── pedidos/                # Modelos y PedidosRepository (ventas, pagos, guardar_venta)
+│   ├── Insumo.kt               # Modelo + enums Unidad/Categoria + formateo
+│   └── InventarioRepository.kt # Insumos (guardar_insumo, ajustar_existencia)
 └── ui/
     ├── login/                  # Pantalla de inicio de sesión
-    ├── inicio/                 # Resumen del negocio
-    ├── inventario/             # Lista, diálogo de alta/edición, ViewModel, validación
+    ├── inicio/                 # Resumen del día (ventas, cobrado por método, por cobrar) + inventario
+    ├── pedidos/                # Lista, editor (menú → resumen), detalle, cobrar
+    ├── inventario/             # Lista, diálogo de alta/edición, validación
+    ├── comun/                  # Aviso de error y actualización periódica
     ├── navegacion/             # Scaffold + barra inferior + NavHost
     └── theme/                  # Colores y tipografía (provisionales)
 ```
 
-**Para agregar una sección nueva** (por ejemplo, Ventas): crea `ui/ventas/`, agrégala al enum `Seccion` y al `NavHost` en [`AppPrincipal.kt`](app/src/main/java/com/example/hamgurgueseria_monchosos/ui/navegacion/AppPrincipal.kt). Si necesita datos, crea su entidad y su DAO, regístralos en `AppDatabase` (subiendo la `version` y agregando una migración) y crea un repositorio.
+### Base de datos en la nube: Supabase
 
-El esquema de la BD se exporta a `app/schemas/`. **Hay que subir esos archivos a git**, porque se usan para revisar y probar las migraciones.
+Los datos viven en **Supabase** (PostgreSQL 17), así que los dos teléfonos comparten la misma información. Las pantallas se actualizan solas cada 20–30 s y después de cada cambio. La app se conecta directo con la llave pública, y la seguridad está en la base de datos: Row Level Security, donde solo entran los correos de `usuarios_permitidos`. El esquema se versiona como migraciones en [`supabase/`](supabase/README.md); ahí están las instrucciones, el modelo de datos, las reglas y los reportes.
+
+Las reglas de negocio importantes viven en la base de datos, no en el teléfono: precios congelados, estado pagado/por cobrar, descuento de inventario por receta, y guardar un pedido completo en una sola transacción (`guardar_venta`).
+
+**Para agregar una sección nueva** (por ejemplo, Gastos): crea `ui/gastos/`, agrégala al enum `Seccion` y al `NavHost` en [`AppPrincipal.kt`](app/src/main/java/com/example/hamgurgueseria_monchosos/ui/navegacion/AppPrincipal.kt), y crea un repositorio en `data/` que use el cliente de Supabase. Si necesitas tablas o funciones nuevas, crea una migración en `supabase/migrations/`.
 
 ## 4. Configurar el inicio de sesión con Google
 
-Sin esta configuración la app compila y funciona, pero el botón de Google muestra un aviso. En compilaciones **debug** aparece además el botón **"Entrar en modo prueba"** para trabajar sin Google. Ese botón no existe en release.
+Sin esta configuración la app compila, pero el botón de Google muestra un aviso.
 
 1. En [Google Cloud Console](https://console.cloud.google.com/), crea un proyecto y configura la **pantalla de consentimiento de OAuth** (tipo externo; agrega los correos de la pareja como usuarios de prueba).
 2. En **Credenciales**, crea un ID de cliente OAuth de tipo **Android**:
@@ -85,23 +92,26 @@ Sin esta configuración la app compila y funciona, pero el botón de Google mues
 4. Agrega a `local.properties` (este archivo **no** se sube a git):
    ```properties
    GOOGLE_WEB_CLIENT_ID=1234567890-xxxxxxxx.apps.googleusercontent.com
-   # Opcional: solo estos correos pueden entrar (separados por coma). Vacío = cualquier cuenta.
-   CORREOS_PERMITIDOS=correo1@gmail.com,correo2@gmail.com
+   SUPABASE_URL=https://<proyecto>.supabase.co
+   SUPABASE_PUBLISHABLE_KEY=sb_publishable_...   # NUNCA la service_role / secret key
    ```
-5. Sincroniza Gradle y vuelve a instalar la app.
+5. En Supabase: **Authentication → Sign In / Providers → Google** activado, con el ID web en "Client IDs".
+6. Da acceso agregando los correos en la tabla **`usuarios_permitidos`** (ver [supabase/README.md](supabase/README.md)).
+7. Sincroniza Gradle y vuelve a instalar la app.
 
-> En CI se pueden pasar los mismos valores como variables de entorno o secretos (`GOOGLE_WEB_CLIENT_ID`, `CORREOS_PERMITIDOS`).
+> En CI se pueden pasar los mismos valores como variables de entorno o secretos.
 
-**Limitación conocida:** como todavía no hay servidor, el token de Google **no se verifica en un backend**; la app solo lee el nombre y el correo. Esto basta mientras los datos vivan solo en el teléfono. En cuanto haya nube o servidor, hay que validar el `idToken` del lado del servidor (o usar Firebase Auth).
+El token de Google se entrega a **Supabase Auth**, que lo verifica en el servidor. Se usa un *nonce* para que un token interceptado no se pueda reutilizar. Si la cuenta no está en `usuarios_permitidos`, la app cierra la sesión y avisa.
 
 ## 5. Seguridad
 
 | Medida | Dónde |
 |---|---|
 | **Cifrado en las conexiones:** solo HTTPS/TLS. El tráfico sin cifrar (`http://`) está bloqueado y solo se confía en los certificados del sistema, no en los que instale el usuario. | [`res/xml/network_security_config.xml`](app/src/main/res/xml/network_security_config.xml), manifiesto |
-| La sesión **no** se incluye en los respaldos de Android ni se transfiere a otro teléfono | `backup_rules.xml`, `data_extraction_rules.xml` |
-| Lista de correos permitidos | `CORREOS_PERMITIDOS` |
-| El modo prueba solo existe en debug | `LoginScreen.kt` (`BuildConfig.DEBUG`) |
+| **Row Level Security** en todas las tablas: sin sesión no se ve nada; con sesión, solo los correos de `usuarios_permitidos` | [`supabase/migrations/…02_seguridad.sql`](supabase/migrations) |
+| Funciones internas fuera de la API pública (esquema `interno`) | migración de seguridad |
+| Login de Google verificado por Supabase Auth, con nonce | `GoogleAuthClient.kt` |
+| Sin respaldos de Android (`allowBackup=false`): los datos están en la nube y la sesión no se copia a otro teléfono | manifiesto |
 | R8 (ofuscación y minificación) en release | `app/build.gradle.kts` |
 | Los secretos viven en `local.properties` o en secretos de CI, nunca en el código | `.gitignore` |
 
