@@ -9,67 +9,92 @@ import androidx.credentials.exceptions.GetCredentialCancellationException
 import androidx.credentials.exceptions.GetCredentialException
 import androidx.credentials.exceptions.NoCredentialException
 import com.example.hamgurgueseria_monchosos.BuildConfig
+import com.example.hamgurgueseria_monchosos.data.remoto.mensajeDeError
 import com.google.android.libraries.identity.googleid.GetSignInWithGoogleOption
 import com.google.android.libraries.identity.googleid.GoogleIdTokenCredential
 import com.google.android.libraries.identity.googleid.GoogleIdTokenParsingException
+import io.github.jan.supabase.SupabaseClient
+import io.github.jan.supabase.auth.auth
+import io.github.jan.supabase.auth.providers.Google
+import io.github.jan.supabase.auth.providers.builtin.IDToken
+import io.github.jan.supabase.postgrest.from
+import kotlinx.serialization.Serializable
+import java.security.MessageDigest
+import java.security.SecureRandom
 
 sealed interface ResultadoLogin {
-    data class Exito(val usuario: Usuario) : ResultadoLogin
+    data object Exito : ResultadoLogin
     data object Cancelado : ResultadoLogin
     data class Error(val mensaje: String) : ResultadoLogin
 }
 
-/** Botón "Iniciar sesión con Google" usando Credential Manager. */
-class GoogleAuthClient(private val context: Context) {
+@Serializable
+private data class Permitido(val correo: String)
+
+/**
+ * Botón "Iniciar sesión con Google" → Supabase Auth.
+ * Google entrega un ID token; Supabase lo verifica en el servidor y abre la sesión.
+ * El acceso real lo decide la tabla usuarios_permitidos (RLS).
+ */
+class GoogleAuthClient(private val context: Context, private val supabase: SupabaseClient) {
     private val credentialManager = CredentialManager.create(context)
 
     suspend fun iniciarSesion(): ResultadoLogin {
-        if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank()) {
-            return ResultadoLogin.Error(
-                "Falta configurar GOOGLE_WEB_CLIENT_ID en local.properties (ver CONTEXTO.md)."
-            )
+        if (BuildConfig.GOOGLE_WEB_CLIENT_ID.isBlank() || BuildConfig.SUPABASE_URL.isBlank()) {
+            return ResultadoLogin.Error("Falta configurar GOOGLE_WEB_CLIENT_ID o SUPABASE_URL en local.properties.")
         }
-        val opcionGoogle = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID).build()
-        val request = GetCredentialRequest.Builder().addCredentialOption(opcionGoogle).build()
+        // Nonce: Google firma el hash; Supabase comprueba que corresponde al valor original.
+        // Así un token interceptado no se puede reutilizar.
+        val nonce = nonceAleatorio()
+        val opcion = GetSignInWithGoogleOption.Builder(BuildConfig.GOOGLE_WEB_CLIENT_ID)
+            .setNonce(sha256(nonce))
+            .build()
+        val request = GetCredentialRequest.Builder().addCredentialOption(opcion).build()
 
-        return try {
+        val idToken = try {
             val credencial = credentialManager.getCredential(context, request).credential
             if (credencial !is CustomCredential ||
                 credencial.type != GoogleIdTokenCredential.TYPE_GOOGLE_ID_TOKEN_CREDENTIAL
-            ) {
-                return ResultadoLogin.Error("Tipo de credencial no reconocido.")
-            }
-            val google = GoogleIdTokenCredential.createFrom(credencial.data)
-            val correo = google.id
-            if (!correoPermitido(correo)) {
-                return ResultadoLogin.Error("La cuenta $correo no tiene acceso a esta app.")
-            }
-            ResultadoLogin.Exito(
-                Usuario(
-                    nombre = google.displayName ?: correo,
-                    correo = correo,
-                    fotoUrl = google.profilePictureUri?.toString(),
-                )
-            )
+            ) return ResultadoLogin.Error("Tipo de credencial no reconocido.")
+            GoogleIdTokenCredential.createFrom(credencial.data).idToken
         } catch (e: GetCredentialCancellationException) {
-            ResultadoLogin.Cancelado
+            return ResultadoLogin.Cancelado
         } catch (e: NoCredentialException) {
-            ResultadoLogin.Error("No hay cuentas de Google en este teléfono.")
+            return ResultadoLogin.Error("No hay cuentas de Google en este teléfono.")
         } catch (e: GetCredentialException) {
-            ResultadoLogin.Error("No se pudo iniciar sesión: ${e.message}")
+            return ResultadoLogin.Error("No se pudo iniciar sesión: ${e.message}")
         } catch (e: GoogleIdTokenParsingException) {
-            ResultadoLogin.Error("Respuesta de Google inválida.")
+            return ResultadoLogin.Error("Respuesta de Google inválida.")
+        }
+
+        return try {
+            supabase.auth.signInWith(IDToken) {
+                this.idToken = idToken
+                provider = Google
+                this.nonce = nonce
+            }
+            // RLS solo deja ver tu propio renglón: si no hay, la cuenta no está autorizada.
+            val permitido = supabase.from("usuarios_permitidos").select().decodeList<Permitido>().isNotEmpty()
+            if (permitido) ResultadoLogin.Exito
+            else {
+                val correo = supabase.auth.currentUserOrNull()?.email.orEmpty()
+                cerrarSesion()
+                ResultadoLogin.Error("La cuenta $correo no tiene acceso. Pide que la agreguen en Supabase (usuarios_permitidos).")
+            }
+        } catch (e: Exception) {
+            runCatching { supabase.auth.signOut() }
+            ResultadoLogin.Error(mensajeDeError(e))
         }
     }
 
-    /** Olvida la cuenta elegida para que la próxima vez vuelva a preguntar. */
     suspend fun cerrarSesion() {
+        runCatching { supabase.auth.signOut() }
         runCatching { credentialManager.clearCredentialState(ClearCredentialStateRequest()) }
     }
 
-    private fun correoPermitido(correo: String): Boolean {
-        val permitidos = BuildConfig.CORREOS_PERMITIDOS
-            .split(',').map { it.trim().lowercase() }.filter { it.isNotEmpty() }
-        return permitidos.isEmpty() || correo.lowercase() in permitidos
-    }
+    private fun nonceAleatorio(): String =
+        ByteArray(32).also { SecureRandom().nextBytes(it) }.joinToString("") { "%02x".format(it) }
+
+    private fun sha256(texto: String): String =
+        MessageDigest.getInstance("SHA-256").digest(texto.toByteArray()).joinToString("") { "%02x".format(it) }
 }

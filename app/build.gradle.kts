@@ -3,7 +3,7 @@ import java.util.Properties
 plugins {
     alias(libs.plugins.android.application)
     alias(libs.plugins.kotlin.compose)
-    alias(libs.plugins.ksp)
+    alias(libs.plugins.kotlin.serialization)
 }
 
 // Valores privados: se leen de local.properties (no se sube a git) o de variables de entorno (CI).
@@ -32,8 +32,9 @@ android {
 
         // ID de cliente OAuth tipo "Aplicación web" de Google Cloud Console.
         buildConfigField("String", "GOOGLE_WEB_CLIENT_ID", "\"${secreto("GOOGLE_WEB_CLIENT_ID")}\"")
-        // Correos autorizados separados por coma. Vacío = cualquier cuenta de Google puede entrar.
-        buildConfigField("String", "CORREOS_PERMITIDOS", "\"${secreto("CORREOS_PERMITIDOS")}\"")
+        // Supabase: URL del proyecto y llave pública (publishable). La seguridad la da RLS.
+        buildConfigField("String", "SUPABASE_URL", "\"${secreto("SUPABASE_URL")}\"")
+        buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${secreto("SUPABASE_PUBLISHABLE_KEY")}\"")
     }
 
     buildTypes {
@@ -54,10 +55,6 @@ android {
     }
 }
 
-ksp {
-    arg("room.schemaLocation", "$projectDir/schemas")
-}
-
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
@@ -73,9 +70,10 @@ dependencies {
     implementation(libs.androidx.credentials)
     implementation(libs.androidx.credentials.play.services.auth)
     implementation(libs.googleid)
-    implementation(libs.androidx.room.runtime)
-    implementation(libs.androidx.room.ktx)
-    ksp(libs.androidx.room.compiler)
+    implementation(platform(libs.supabase.bom))
+    implementation(libs.supabase.auth)
+    implementation(libs.supabase.postgrest)
+    implementation(libs.ktor.client.okhttp)
     testImplementation(libs.junit)
     androidTestImplementation(platform(libs.androidx.compose.bom))
     androidTestImplementation(libs.androidx.compose.ui.test.junit4)

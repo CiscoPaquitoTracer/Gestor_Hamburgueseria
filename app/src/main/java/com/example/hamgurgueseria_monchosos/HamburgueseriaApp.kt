@@ -1,12 +1,22 @@
 package com.example.hamgurgueseria_monchosos
 
 import android.app.Application
-import com.example.hamgurgueseria_monchosos.auth.SesionStore
-import com.example.hamgurgueseria_monchosos.data.AppDatabase
+import com.example.hamgurgueseria_monchosos.auth.Sesion
 import com.example.hamgurgueseria_monchosos.data.InventarioRepository
+import com.example.hamgurgueseria_monchosos.data.pedidos.PedidosRepository
+import com.example.hamgurgueseria_monchosos.data.remoto.crearSupabase
+import kotlinx.coroutines.MainScope
 
 /** Contenedor sencillo de dependencias compartidas por toda la app. */
 class HamburgueseriaApp : Application() {
-    val inventario by lazy { InventarioRepository(AppDatabase.crear(this).insumoDao()) }
-    val sesion by lazy { SesionStore(this) }
+    val supabase by lazy { crearSupabase() }
+    val sesion by lazy { Sesion(supabase, MainScope()) }
+    val inventario by lazy { InventarioRepository(supabase) }
+    val pedidos by lazy { PedidosRepository(supabase) }
+
+    override fun onCreate() {
+        super.onCreate()
+        // Los datos ya viven en Supabase: se borra la base local de versiones anteriores (Room).
+        deleteDatabase("hamburgueseria.db")
+    }
 }
