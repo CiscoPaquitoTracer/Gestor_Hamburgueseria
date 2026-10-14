@@ -49,3 +49,4 @@ google-services.json
 # CI: llaves de firma y cache de Gradle del contenedor
 keystore.properties
 .gradle-home/
+infra/jenkins/.env
