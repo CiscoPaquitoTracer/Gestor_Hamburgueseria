@@ -37,8 +37,25 @@ android {
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${secreto("SUPABASE_PUBLISHABLE_KEY")}\"")
     }
 
+    // Firma de release: el keystore y sus contraseñas solo llegan por variables de entorno (Jenkins).
+    // Sin KEYSTORE_FILE, debug y pruebas funcionan igual y el release sale sin firmar.
+    val keystore = providers.environmentVariable("KEYSTORE_FILE").orNull
+    signingConfigs {
+        create("release") {
+            if (keystore != null) {
+                storeFile = file(keystore)
+                storePassword = providers.environmentVariable("KEYSTORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("KEY_PASSWORD").orNull
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (keystore != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
