@@ -83,10 +83,27 @@ jobs:
     if: github.event_name == 'pull_request'
     runs-on: ubuntu-latest
     permissions:
+      contents: read
       pull-requests: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/dependency-review-action@v5
+      - name: Comprobar si Dependency Graph está habilitado
+        id: dependency-graph
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          status="$(curl -sS -o /tmp/sbom.json -w "%{http_code}" \
+            --oauth2-bearer "$GH_TOKEN" \
+            -H "Accept: application/vnd.github+json" \
+            "https://api.github.com/repos/${{ github.repository }}/dependency-graph/sbom")"
+          if [ "$status" = "200" ]; then
+            echo "enabled=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "enabled=false" >> "$GITHUB_OUTPUT"
+            echo "Dependency Graph no está disponible (HTTP $status). Se omite la revisión."
+          fi
+      - uses: actions/dependency-review-action@v4
+        if: steps.dependency-graph.outputs.enabled == 'true'
         with:
           fail-on-severity: high
           comment-summary-in-pr: on-failure

@@ -10,5 +10,10 @@ App Android (Kotlin + Jetpack Compose) para administrar la hamburguesería **Mon
 ## Inicio rápido
 
 1. Abre el proyecto en Android Studio.
-2. (Opcional) Agrega `GOOGLE_WEB_CLIENT_ID` a `local.properties` (ver CONTEXTO.md §4). Sin ese valor puedes entrar con el botón "Modo prueba" en debug.
+2. Agrega `GOOGLE_WEB_CLIENT_ID`, `SUPABASE_URL` y `SUPABASE_PUBLISHABLE_KEY` a `local.properties` (ver CONTEXTO.md §4). Tu correo debe estar en `usuarios_permitidos` de Supabase.
 3. Ejecuta la app.
+
+## CI/CD
+
+- **GitHub Actions:** pruebas, lint, compilación, base de datos y seguridad en cada push y PR (`.github/workflows/`).
+- **Jenkins:** pipeline en Docker con release firmado en `main`. Instalación: **[docs/CI_SETUP.md](docs/CI_SETUP.md)**.

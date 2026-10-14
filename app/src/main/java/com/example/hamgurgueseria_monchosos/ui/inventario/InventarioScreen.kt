@@ -36,15 +36,20 @@ import com.example.hamgurgueseria_monchosos.data.Categoria
 import com.example.hamgurgueseria_monchosos.data.Insumo
 import com.example.hamgurgueseria_monchosos.data.formatearCantidad
 import com.example.hamgurgueseria_monchosos.data.formatearDinero
+import com.example.hamgurgueseria_monchosos.ui.comun.ActualizarPeriodicamente
+import com.example.hamgurgueseria_monchosos.ui.comun.AvisoError
 
 @Composable
 fun InventarioScreen(vm: InventarioViewModel) {
     val estado by vm.estado.collectAsStateWithLifecycle()
+    val error by vm.error.collectAsStateWithLifecycle()
     var editando by remember { mutableStateOf<Insumo?>(null) }
     var creando by remember { mutableStateOf(false) }
+    ActualizarPeriodicamente(cadaMs = 30_000) { vm.refrescar() }
 
     Box(Modifier.fillMaxSize()) {
         Column(Modifier.fillMaxSize()) {
+            AvisoError(error, onDescartar = vm::descartarError, onReintentar = vm::refrescar)
             Row(
                 Modifier
                     .fillMaxWidth()

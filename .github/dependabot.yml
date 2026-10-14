@@ -23,3 +23,21 @@ updates:
       interval: "weekly"
       day: "monday"
     labels: ["dependencias", "ci"]
+
+  # Imágenes de CI. Dependabot actualiza el FROM, pero NO los ARG del SDK de ci/Dockerfile
+  # (ANDROID_COMPILE_SDK / ANDROID_BUILD_TOOLS): esos se cambian a mano cuando cambie compileSdk.
+  - package-ecosystem: "docker"
+    directory: "/ci"
+    target-branch: "develop"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels: ["dependencias", "ci"]
+
+  - package-ecosystem: "docker"
+    directory: "/infra/jenkins"
+    target-branch: "develop"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+    labels: ["dependencias", "ci"]
