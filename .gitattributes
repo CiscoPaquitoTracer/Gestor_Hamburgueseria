@@ -13,3 +13,5 @@ Dockerfile      text eol=lf
 *.webp          binary
 *.jks           binary
 *.keystore      binary
+# SQL siempre con LF: el cuerpo de las funciones queda idéntico en local, CI y Supabase.
+*.sql           text eol=lf
