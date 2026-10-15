@@ -25,6 +25,8 @@ class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
         enableEdgeToEdge()
+        // Anti-tapjacking: ignora toques si otra app dibuja algo encima (ej. para hacer tocar "Cobrar").
+        window.decorView.filterTouchesWhenObscured = true
         val app = application as HamburgueseriaApp
 
         setContent {

@@ -15,10 +15,12 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.Hamgurgueseriamonchosos">
+        <!-- taskAffinity="": evita que otra app se meta en nuestra tarea (StrandHogg / task hijacking). -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
             android:label="@string/app_name"
+            android:taskAffinity=""
             android:theme="@style/Theme.Hamgurgueseriamonchosos"
             android:windowSoftInputMode="adjustResize">
             <intent-filter>
