@@ -337,7 +337,7 @@ RESET ROLE;
 
 -- Sesión de Google con un correo NO autorizado: no ve nada y no puede escribir.
 SET LOCAL ROLE authenticated;
-SELECT set_config('request.jwt.claims', '{"email":"intruso@gmail.com","role":"authenticated"}', true);
+SELECT set_config('request.jwt.claims', '{"email":"intruso@gmail.com","role":"authenticated","app_metadata":{"provider":"google"},"user_metadata":{"email_verified":true}}', true);
 DO $$ BEGIN
     ASSERT (SELECT count(*) FROM productos) = 0, 'Un correo no autorizado no debe ver el menú';
     ASSERT (SELECT count(*) FROM usuarios_permitidos) = 0, 'Ni la lista de autorizados';
@@ -355,10 +355,36 @@ DO $$ BEGIN
 END $$;
 RESET ROLE;
 
--- Correo autorizado: ve el menú y puede vender (los triggers internos funcionan con su rol).
 INSERT INTO usuarios_permitidos (correo, nombre) VALUES ('equipo@prueba.com', 'Prueba');
+
+-- Suplantación (hallazgo del PR #14): correo autorizado pero NO vía Google, o sin verificar.
+-- Incluye user_metadata.email_verified falsificado (el usuario puede editar user_metadata).
 SET LOCAL ROLE authenticated;
-SELECT set_config('request.jwt.claims', '{"email":"Equipo@Prueba.com","role":"authenticated"}', true);
+DO $$
+DECLARE
+    claims text;
+BEGIN
+    FOREACH claims IN ARRAY ARRAY[
+        '{"email":"equipo@prueba.com","role":"authenticated","app_metadata":{"provider":"email"},"user_metadata":{"email_verified":true}}',
+        '{"email":"equipo@prueba.com","role":"authenticated","app_metadata":{"provider":"google"},"user_metadata":{"email_verified":false}}',
+        '{"email":"equipo@prueba.com","role":"authenticated","user_metadata":{"email_verified":true}}',
+        '{"email":"equipo@prueba.com","role":"authenticated","is_anonymous":true,"app_metadata":{"provider":"google"},"user_metadata":{"email_verified":true}}'
+    ] LOOP
+        PERFORM set_config('request.jwt.claims', claims, true);
+        ASSERT (SELECT count(*) FROM productos) = 0, 'Sin Google verificado no debe ver el menú: ' || claims;
+        ASSERT (SELECT count(*) FROM usuarios_permitidos) = 0, 'Ni saber si está en la lista: ' || claims;
+        BEGIN
+            INSERT INTO gastos (categoria, monto) VALUES ('otro', 1);
+            RAISE EXCEPTION 'Suplantación pudo escribir: %', claims;
+        EXCEPTION WHEN insufficient_privilege THEN NULL;
+        END;
+    END LOOP;
+END $$;
+RESET ROLE;
+
+-- Correo autorizado con Google verificado: ve el menú y puede vender (los triggers internos funcionan con su rol).
+SET LOCAL ROLE authenticated;
+SELECT set_config('request.jwt.claims', '{"email":"Equipo@Prueba.com","role":"authenticated","app_metadata":{"provider":"google"},"user_metadata":{"email_verified":true}}', true);
 DO $$
 DECLARE v bigint; pan0 numeric;
 BEGIN

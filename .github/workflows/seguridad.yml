@@ -27,14 +27,14 @@ jobs:
       security-events: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21
       - uses: gradle/actions/setup-gradle@v4
         with:
           cache-read-only: true
-      - uses: github/codeql-action/init@v3
+      - uses: github/codeql-action/init@v4
         with:
           languages: java-kotlin
           build-mode: manual
@@ -44,7 +44,7 @@ jobs:
         run: >
           ./gradlew assembleDebug --no-daemon --no-build-cache --no-configuration-cache
           -Pkotlin.compiler.execution.strategy=in-process
-      - uses: github/codeql-action/analyze@v3
+      - uses: github/codeql-action/analyze@v4
         with:
           category: "/language:java-kotlin"
 
@@ -62,7 +62,7 @@ jobs:
         run: |
           pip install mobsfscan
           mobsfscan --sarif --output mobsfscan.sarif . || true
-      - uses: github/codeql-action/upload-sarif@v3
+      - uses: github/codeql-action/upload-sarif@v4
         with:
           sarif_file: mobsfscan.sarif
           category: mobsfscan
@@ -74,7 +74,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -102,7 +102,7 @@ jobs:
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             echo "Dependency Graph no está disponible (HTTP $status). Se omite la revisión."
           fi
-      - uses: actions/dependency-review-action@v4
+      - uses: actions/dependency-review-action@v5
         if: steps.dependency-graph.outputs.enabled == 'true'
         with:
           fail-on-severity: high
@@ -118,7 +118,7 @@ jobs:
       contents: write
     steps:
       - uses: actions/checkout@v4
-      - uses: actions/setup-java@v4
+      - uses: actions/setup-java@v6
         with:
           distribution: temurin
           java-version: 21

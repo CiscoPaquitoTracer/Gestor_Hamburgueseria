@@ -37,8 +37,25 @@ android {
         buildConfigField("String", "SUPABASE_PUBLISHABLE_KEY", "\"${secreto("SUPABASE_PUBLISHABLE_KEY")}\"")
     }
 
+    // Firma de release: el keystore y sus contraseñas solo llegan por variables de entorno (Jenkins).
+    // Sin KEYSTORE_FILE, debug y pruebas funcionan igual y el release sale sin firmar.
+    val keystore = providers.environmentVariable("KEYSTORE_FILE").orNull
+    signingConfigs {
+        create("release") {
+            if (keystore != null) {
+                storeFile = file(keystore)
+                storePassword = providers.environmentVariable("KEYSTORE_PASSWORD").orNull
+                keyAlias = providers.environmentVariable("KEY_ALIAS").orNull
+                keyPassword = providers.environmentVariable("KEY_PASSWORD").orNull
+            }
+        }
+    }
+
     buildTypes {
         release {
+            if (keystore != null) {
+                signingConfig = signingConfigs.getByName("release")
+            }
             optimization {
                 enable = true
                 packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
@@ -52,6 +69,25 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+}
+
+// El lint de AGP (configuración androidLintTool) trae sus propias librerías con versiones
+// vulnerables (alertas de Dependabot). Solo corren al compilar, pero se fuerzan las seguras.
+// Revisar al actualizar AGP: si el lint ya trae versiones iguales o mayores, se puede quitar.
+val versionesSegurasLint = mapOf(
+    "org.bouncycastle:bcprov-jdk18on" to "1.86",
+    "org.bouncycastle:bcpkix-jdk18on" to "1.86",
+    "org.bouncycastle:bcutil-jdk18on" to "1.86",
+    "org.apache.commons:commons-lang3" to "3.21.0",
+    "org.apache.httpcomponents:httpclient" to "4.5.14",
+)
+configurations.matching { it.name == "androidLintTool" }.configureEach {
+    resolutionStrategy.eachDependency {
+        versionesSegurasLint["${requested.group}:${requested.name}"]?.let {
+            useVersion(it)
+            because("Versión sin vulnerabilidades conocidas (alertas de Dependabot)")
+        }
     }
 }
 
