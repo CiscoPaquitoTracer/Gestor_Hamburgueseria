@@ -72,6 +72,25 @@ android {
     }
 }
 
+// El lint de AGP (configuración androidLintTool) trae sus propias librerías con versiones
+// vulnerables (alertas de Dependabot). Solo corren al compilar, pero se fuerzan las seguras.
+// Revisar al actualizar AGP: si el lint ya trae versiones iguales o mayores, se puede quitar.
+val versionesSegurasLint = mapOf(
+    "org.bouncycastle:bcprov-jdk18on" to "1.85",
+    "org.bouncycastle:bcpkix-jdk18on" to "1.85",
+    "org.bouncycastle:bcutil-jdk18on" to "1.85",
+    "org.apache.commons:commons-lang3" to "3.18.0",
+    "org.apache.httpcomponents:httpclient" to "4.5.14",
+)
+configurations.matching { it.name == "androidLintTool" }.configureEach {
+    resolutionStrategy.eachDependency {
+        versionesSegurasLint["${requested.group}:${requested.name}"]?.let {
+            useVersion(it)
+            because("Versión sin vulnerabilidades conocidas (alertas de Dependabot)")
+        }
+    }
+}
+
 dependencies {
     implementation(platform(libs.androidx.compose.bom))
     implementation(libs.androidx.activity.compose)
