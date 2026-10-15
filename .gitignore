@@ -53,3 +53,4 @@ infra/jenkins/.env
 
 # Documentacion local (no se sube)
 Documentacion_Monchosos.docx
+CI_CD_PLAN.md

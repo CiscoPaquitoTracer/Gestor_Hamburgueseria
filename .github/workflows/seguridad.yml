@@ -74,7 +74,7 @@ jobs:
       - uses: actions/checkout@v4
         with:
           fetch-depth: 0
-      - uses: gitleaks/gitleaks-action@v2
+      - uses: gitleaks/gitleaks-action@v3
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -102,7 +102,7 @@ jobs:
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             echo "Dependency Graph no está disponible (HTTP $status). Se omite la revisión."
           fi
-      - uses: actions/dependency-review-action@v4
+      - uses: actions/dependency-review-action@v5
         if: steps.dependency-graph.outputs.enabled == 'true'
         with:
           fail-on-severity: high
