@@ -8,7 +8,7 @@ Guía de los pasos que hay que hacer **a mano** para que Jenkins compile y prueb
 GitHub ──webhook──► Jenkins (infra/jenkins, Docker Compose)
                        │ usa el Docker de la computadora (docker.sock)
                        ▼
-                    Contenedor de build (ci/Dockerfile: JDK 21 + Android SDK 37)
+                    Contenedor de build (ci/Dockerfile: JDK 25 + Android SDK 37)
                        └─ Jenkinsfile: Lint → Unit Tests → Build Debug → Build Release (solo main)
 ```
 
