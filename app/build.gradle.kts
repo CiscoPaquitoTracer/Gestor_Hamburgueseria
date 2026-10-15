@@ -76,10 +76,10 @@ android {
 // vulnerables (alertas de Dependabot). Solo corren al compilar, pero se fuerzan las seguras.
 // Revisar al actualizar AGP: si el lint ya trae versiones iguales o mayores, se puede quitar.
 val versionesSegurasLint = mapOf(
-    "org.bouncycastle:bcprov-jdk18on" to "1.85",
-    "org.bouncycastle:bcpkix-jdk18on" to "1.85",
-    "org.bouncycastle:bcutil-jdk18on" to "1.85",
-    "org.apache.commons:commons-lang3" to "3.18.0",
+    "org.bouncycastle:bcprov-jdk18on" to "1.86",
+    "org.bouncycastle:bcpkix-jdk18on" to "1.86",
+    "org.bouncycastle:bcutil-jdk18on" to "1.86",
+    "org.apache.commons:commons-lang3" to "3.21.0",
     "org.apache.httpcomponents:httpclient" to "4.5.14",
 )
 configurations.matching { it.name == "androidLintTool" }.configureEach {
