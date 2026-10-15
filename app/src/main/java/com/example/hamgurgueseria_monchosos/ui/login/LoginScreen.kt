@@ -26,24 +26,20 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.example.hamgurgueseria_monchosos.BuildConfig
 import com.example.hamgurgueseria_monchosos.auth.GoogleAuthClient
 import com.example.hamgurgueseria_monchosos.auth.ResultadoLogin
-import com.example.hamgurgueseria_monchosos.auth.Usuario
 import com.example.hamgurgueseria_monchosos.ui.theme.HamgurgueseriamonchososTheme
 import kotlinx.coroutines.launch
 
+/** Al iniciar sesión, Supabase cambia el estado de la sesión y MainActivity cambia de pantalla sola. */
 @Composable
-fun LoginScreen(onSesionIniciada: (Usuario) -> Unit) {
-    val context = LocalContext.current
+fun LoginScreen(auth: GoogleAuthClient) {
     val scope = rememberCoroutineScope()
-    val auth = remember { GoogleAuthClient(context) }
     var cargando by remember { mutableStateOf(false) }
     var error by remember { mutableStateOf<String?>(null) }
 
@@ -55,17 +51,13 @@ fun LoginScreen(onSesionIniciada: (Usuario) -> Unit) {
             error = null
             scope.launch {
                 when (val r = auth.iniciarSesion()) {
-                    is ResultadoLogin.Exito -> onSesionIniciada(r.usuario)
+                    ResultadoLogin.Exito, ResultadoLogin.Cancelado -> Unit
                     is ResultadoLogin.Error -> error = r.mensaje
-                    ResultadoLogin.Cancelado -> Unit
                 }
                 cargando = false
             }
         },
-        // Solo existe en compilaciones debug, para probar sin configurar Google.
-        onModoPrueba = if (BuildConfig.DEBUG) {
-            { onSesionIniciada(Usuario("Modo prueba", "prueba@local")) }
-        } else null,
+        onModoPrueba = null,
     )
 }
 

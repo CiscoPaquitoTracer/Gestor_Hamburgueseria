@@ -44,3 +44,12 @@ google-services.json
 
 # Android Profiling
 *.hprof
+
+
+# CI: llaves de firma y cache de Gradle del contenedor
+keystore.properties
+.gradle-home/
+infra/jenkins/.env
+
+# Documentacion local (no se sube)
+Documentacion_Monchosos.docx

@@ -1,0 +1,15 @@
+# Finales de línea fijos, sin importar la configuración de Git de cada quien (core.autocrlf).
+# Los scripts de Linux deben tener LF, o fallan dentro de Docker/Jenkins ("$'\r': command not found").
+gradlew         text eol=lf
+*.sh            text eol=lf
+Jenkinsfile     text eol=lf
+Dockerfile      text eol=lf
+# Los scripts de Windows llevan CRLF.
+*.bat           text eol=crlf
+*.cmd           text eol=crlf
+# Binarios: nunca convertir.
+*.jar           binary
+*.png           binary
+*.webp          binary
+*.jks           binary
+*.keystore      binary

@@ -1,5 +1,0 @@
-<?xml version="1.0" encoding="utf-8"?>
-<!-- Android 11 y anteriores. El inventario sí se respalda; la sesión no (obliga a volver a iniciar con Google). -->
-<full-backup-content>
-    <exclude domain="sharedpref" path="sesion.xml" />
-</full-backup-content>
