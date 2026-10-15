@@ -1,6 +1,6 @@
 # Imagen para compilar y probar la app en CI (Jenkins).
 # JDK 21: AGP 9 exige JDK 17+, y es el mismo que usa GitHub Actions.
-FROM eclipse-temurin:21-jdk-jammy
+FROM eclipse-temurin:25-jdk-jammy
 
 # Versiones del proyecto (app/build.gradle.kts: compileSdk = 37; AGP 9.4 usa build-tools 36.0.0).
 # Dependabot actualiza la imagen base (FROM), pero NO estos ARG: cámbialos a mano si cambia compileSdk.
