@@ -102,7 +102,7 @@ jobs:
             echo "enabled=false" >> "$GITHUB_OUTPUT"
             echo "Dependency Graph no está disponible (HTTP $status). Se omite la revisión."
           fi
-      - uses: actions/dependency-review-action@v4
+      - uses: actions/dependency-review-action@v5
         if: steps.dependency-graph.outputs.enabled == 'true'
         with:
           fail-on-severity: high
