@@ -1,9 +1,14 @@
 package com.example.hamgurgueseria_monchosos.data.menu
 
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+
 /**
- * Menú actual de Monchosos (fuente: men_monchosos.md; igual que servidor/db/init/02_menu.sql).
+ * Menú de Monchosos (fuente: men_monchosos.md). Aquí vive la ESTRUCTURA (combos, descripciones,
+ * categorías); los PRECIOS y la disponibilidad mandan desde Supabase (ver [Menu.actualizar] y
+ * MenuRepository). Los precios de este archivo solo se usan mientras carga o si no hay internet.
  * Los precios van en CENTAVOS para no tener errores de redondeo.
- * Cuando exista el backend, este catálogo vendrá del servidor.
  */
 /** [db] = nombre de la categoría en Supabase (tabla categorias_menu). */
 enum class CategoriaMenu(val etiqueta: String, val emoji: String, val singular: String, val db: String) {
@@ -17,7 +22,26 @@ enum class CategoriaMenu(val etiqueta: String, val emoji: String, val singular: 
     REFRESCOS("Refrescos", "🥤", "Refresco", "Refrescos"),
 }
 
-data class Variante(val id: String, val nombre: String, val precio: Long)
+/** [dbId] = id en Supabase (0 mientras no se ha cargado). */
+/** Precio y disponibilidad de un producto según Supabase (precios en centavos). */
+data class PrecioDb(
+    val id: Long,
+    val categoriaDb: String,
+    val nombre: String,
+    val precio: Long?,
+    val activo: Boolean,
+    val variantes: List<VarianteDb> = emptyList(),
+)
+
+data class VarianteDb(val id: Long, val nombre: String, val precio: Long, val activo: Boolean)
+
+data class Variante(
+    val id: String,
+    val nombre: String,
+    val precio: Long,
+    val activo: Boolean = true,
+    val dbId: Long = 0,
+)
 
 /** Una opción permitida dentro de un grupo de combo (ej. "Boneless 5 piezas"). */
 data class OpcionCombo(val productoId: String, val varianteId: String? = null)
@@ -36,10 +60,14 @@ data class ProductoMenu(
     val conSabor: Boolean = false,
     val incluyePapas: Boolean = false,
     val grupos: List<GrupoCombo> = emptyList(),
+    /** false = "no disponible hoy": no aparece al tomar pedidos. */
+    val activo: Boolean = true,
+    val dbId: Long = 0,
 ) {
     val esCombo: Boolean get() = grupos.isNotEmpty()
     val necesitaConfigurar: Boolean get() = variantes.isNotEmpty() || conSabor || esCombo
-    val precioDesde: Long get() = precio ?: variantes.minOf { it.precio }
+    val variantesActivas: List<Variante> get() = variantes.filter { it.activo }
+    val precioDesde: Long get() = precio ?: (variantesActivas.ifEmpty { variantes }).minOf { it.precio }
     fun variante(id: String?): Variante? = variantes.firstOrNull { it.id == id }
 }
 
@@ -144,16 +172,43 @@ object Menu {
         ),
     )
 
-    val productos: List<ProductoMenu> =
+    /** Menú tal como está escrito arriba (precios de respaldo). */
+    private val base: List<ProductoMenu> =
         burgers + doggos + alitas + boneless + papas + combos + aderezos + refrescos
 
-    private val porId = productos.associateBy { it.id }
-    private val nombresRepetidos = productos.filter { it.categoria != CategoriaMenu.ADEREZOS }
+    private val _catalogo = MutableStateFlow(base)
+
+    /** Menú vigente, con precios y disponibilidad de Supabase. Las pantallas lo observan. */
+    val catalogo: StateFlow<List<ProductoMenu>> = _catalogo.asStateFlow()
+
+    val productos: List<ProductoMenu> get() = _catalogo.value
+
+    private val nombresRepetidos = base.filter { it.categoria != CategoriaMenu.ADEREZOS }
         .groupingBy { it.nombre }.eachCount().filterValues { it > 1 }.keys
 
-    fun producto(id: String): ProductoMenu = porId.getValue(id)
+    /**
+     * Aplica lo que hay en Supabase sobre el menú base. Se empata por categoría + nombre
+     * (y la variante por nombre); lo que no esté en [filas] se queda con su precio de respaldo.
+     */
+    fun actualizar(filas: List<PrecioDb>) {
+        val porNombre = filas.associateBy { it.categoriaDb to it.nombre }
+        _catalogo.value = base.map { p ->
+            val fila = porNombre[p.categoria.db to p.nombre] ?: return@map p
+            p.copy(
+                precio = if (p.precio != null) fila.precio ?: p.precio else null,
+                activo = fila.activo,
+                dbId = fila.id,
+                variantes = p.variantes.map { v ->
+                    fila.variantes.firstOrNull { it.nombre == v.nombre }
+                        ?.let { v.copy(precio = it.precio, activo = it.activo, dbId = it.id) } ?: v
+                },
+            )
+        }
+    }
 
-    fun productoONull(id: String): ProductoMenu? = porId[id]
+    fun producto(id: String): ProductoMenu = productoONull(id) ?: throw NoSuchElementException(id)
+
+    fun productoONull(id: String): ProductoMenu? = productos.firstOrNull { it.id == id }
 
     /** Busca por los nombres con que el producto está en Supabase. */
     fun porNombreDb(categoriaDb: String, nombre: String): ProductoMenu? =

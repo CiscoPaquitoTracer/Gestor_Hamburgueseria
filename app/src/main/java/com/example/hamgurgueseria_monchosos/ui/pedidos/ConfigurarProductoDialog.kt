@@ -29,6 +29,7 @@ import androidx.compose.ui.unit.dp
 import com.example.hamgurgueseria_monchosos.data.formatearCentavos
 import com.example.hamgurgueseria_monchosos.data.menu.Eleccion
 import com.example.hamgurgueseria_monchosos.data.menu.Menu
+import com.example.hamgurgueseria_monchosos.data.menu.OpcionCombo
 import com.example.hamgurgueseria_monchosos.data.menu.ProductoMenu
 import com.example.hamgurgueseria_monchosos.data.menu.armarRenglon
 import com.example.hamgurgueseria_monchosos.data.pedidos.Renglon
@@ -40,7 +41,7 @@ fun ConfigurarProductoDialog(
     onAgregar: (Renglon) -> Unit,
     onCerrar: () -> Unit,
 ) {
-    var varianteId by remember { mutableStateOf(producto.variantes.singleOrNull()?.id) }
+    var varianteId by remember { mutableStateOf(producto.variantesActivas.singleOrNull()?.id) }
     var sabor by remember { mutableStateOf<String?>(null) }
     var cantidad by remember { mutableIntStateOf(1) }
     var notas by remember { mutableStateOf("") }
@@ -50,7 +51,7 @@ fun ConfigurarProductoDialog(
     val lugares = remember { producto.grupos.flatMap { g -> List(g.cantidad) { i -> g to i } } }
     val elecciones = remember {
         mutableStateListOf<Eleccion?>().apply {
-            lugares.forEach { (g, _) -> add(g.opciones.singleOrNull()?.let { Eleccion(it) }) }
+            lugares.forEach { (g, _) -> add(g.opciones.filter(::opcionDisponible).singleOrNull()?.let { Eleccion(it) }) }
         }
     }
 
@@ -68,10 +69,10 @@ fun ConfigurarProductoDialog(
                     Text(producto.descripcion, style = MaterialTheme.typography.bodySmall)
                 }
 
-                if (producto.variantes.isNotEmpty()) {
+                if (producto.variantesActivas.isNotEmpty()) {
                     Etiqueta("Tamaño")
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        producto.variantes.forEach { v ->
+                        producto.variantesActivas.forEach { v ->
                             FilterChip(
                                 selected = varianteId == v.id,
                                 onClick = { varianteId = v.id },
@@ -91,7 +92,7 @@ fun ConfigurarProductoDialog(
                     Etiqueta(if (grupo.cantidad > 1) "${grupo.nombre} ${n + 1} de ${grupo.cantidad}" else grupo.nombre)
                     val actual = elecciones[i]
                     FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                        grupo.opciones.forEach { op ->
+                        grupo.opciones.filter(::opcionDisponible).forEach { op ->
                             FilterChip(
                                 selected = actual?.opcion == op,
                                 onClick = { elecciones[i] = Eleccion(op) },
@@ -151,4 +152,10 @@ private fun Etiqueta(texto: String, modifier: Modifier = Modifier) {
         fontWeight = FontWeight.SemiBold,
         modifier = modifier.padding(top = 4.dp),
     )
+}
+
+/** Una opción de combo se ofrece solo si su producto (y su tamaño, si aplica) está disponible. */
+private fun opcionDisponible(op: OpcionCombo): Boolean {
+    val p = Menu.productoONull(op.productoId) ?: return false
+    return p.activo && (op.varianteId == null || p.variante(op.varianteId)?.activo == true)
 }
