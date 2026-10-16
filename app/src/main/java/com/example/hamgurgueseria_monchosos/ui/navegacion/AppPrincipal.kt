@@ -20,10 +20,14 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.example.hamgurgueseria_monchosos.auth.Usuario
 import com.example.hamgurgueseria_monchosos.data.InventarioRepository
+import com.example.hamgurgueseria_monchosos.data.menu.MenuRepository
 import com.example.hamgurgueseria_monchosos.data.pedidos.PedidosRepository
+import com.example.hamgurgueseria_monchosos.ui.comun.ActualizarPeriodicamente
 import com.example.hamgurgueseria_monchosos.ui.inicio.InicioScreen
 import com.example.hamgurgueseria_monchosos.ui.inventario.InventarioScreen
 import com.example.hamgurgueseria_monchosos.ui.inventario.InventarioViewModel
+import com.example.hamgurgueseria_monchosos.ui.menu.MenuScreen
+import com.example.hamgurgueseria_monchosos.ui.menu.MenuViewModel
 import com.example.hamgurgueseria_monchosos.ui.pedidos.PedidoDetalleScreen
 import com.example.hamgurgueseria_monchosos.ui.pedidos.PedidoEditorScreen
 import com.example.hamgurgueseria_monchosos.ui.pedidos.PedidoEditorViewModel
@@ -35,6 +39,7 @@ private enum class Seccion(val ruta: String, val titulo: String, val icono: Stri
     INICIO("inicio", "Inicio", "🏠"),
     PEDIDOS("pedidos", "Pedidos", "🧾"),
     INVENTARIO("inventario", "Inventario", "📦"),
+    MENU("menu", "Menú", "🍔"),
 }
 
 /** Pantallas internas (sin barra inferior, con botón de regreso). */
@@ -52,6 +57,7 @@ fun AppPrincipal(
     usuario: Usuario,
     inventario: InventarioRepository,
     pedidos: PedidosRepository,
+    menu: MenuRepository,
     onCerrarSesion: () -> Unit,
 ) {
     val nav = rememberNavController()
@@ -62,6 +68,9 @@ fun AppPrincipal(
 
     val inventarioVm: InventarioViewModel = viewModel { InventarioViewModel(inventario) }
     val pedidosVm: PedidosViewModel = viewModel { PedidosViewModel(pedidos) }
+    val menuVm: MenuViewModel = viewModel { MenuViewModel(menu) }
+    // Precios del menú al día en toda la app (los cambia el otro teléfono también).
+    ActualizarPeriodicamente(cadaMs = 120_000) { menuVm.refrescar() }
 
     val titulo = when (ruta) {
         Rutas.PEDIDO_NUEVO -> "Nuevo pedido"
@@ -115,6 +124,7 @@ fun AppPrincipal(
                 )
             }
             composable(Seccion.INVENTARIO.ruta) { InventarioScreen(inventarioVm) }
+            composable(Seccion.MENU.ruta) { MenuScreen(menuVm) }
 
             composable(Rutas.PEDIDO_NUEVO) {
                 val vm: PedidoEditorViewModel = viewModel { PedidoEditorViewModel(pedidos, null) }

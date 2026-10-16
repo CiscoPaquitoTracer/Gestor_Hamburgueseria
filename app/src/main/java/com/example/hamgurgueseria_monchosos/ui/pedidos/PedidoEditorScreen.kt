@@ -73,6 +73,8 @@ fun PedidoEditorScreen(vm: PedidoEditorViewModel, onGuardado: (Long) -> Unit) {
 @Composable
 private fun PasoMenu(s: EditorUiState, vm: PedidoEditorViewModel) {
     var configurando by remember { mutableStateOf<ProductoMenu?>(null) }
+    // Se observa el catálogo para que un cambio de precio o disponibilidad se vea al momento.
+    val catalogo by Menu.catalogo.collectAsStateWithLifecycle()
 
     Column(Modifier.fillMaxSize()) {
         Row(
@@ -102,7 +104,7 @@ private fun PasoMenu(s: EditorUiState, vm: PedidoEditorViewModel) {
                         color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
-            items(Menu.deCategoria(s.categoria), key = { it.id }) { producto ->
+            items(catalogo.filter { it.categoria == s.categoria && it.activo }, key = { it.id }) { producto ->
                 ProductoFila(producto) {
                     if (producto.necesitaConfigurar) configurando = producto
                     else armarRenglon(producto).onSuccess(vm::agregar)

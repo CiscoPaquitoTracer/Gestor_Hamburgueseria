@@ -3,6 +3,7 @@ package com.example.hamgurgueseria_monchosos
 import android.app.Application
 import com.example.hamgurgueseria_monchosos.auth.Sesion
 import com.example.hamgurgueseria_monchosos.data.InventarioRepository
+import com.example.hamgurgueseria_monchosos.data.menu.MenuRepository
 import com.example.hamgurgueseria_monchosos.data.pedidos.PedidosRepository
 import com.example.hamgurgueseria_monchosos.data.remoto.crearSupabase
 import kotlinx.coroutines.MainScope
@@ -13,6 +14,7 @@ class HamburgueseriaApp : Application() {
     val sesion by lazy { Sesion(supabase, MainScope()) }
     val inventario by lazy { InventarioRepository(supabase) }
     val pedidos by lazy { PedidosRepository(supabase) }
+    val menu by lazy { MenuRepository(supabase) }
 
     override fun onCreate() {
         super.onCreate()
