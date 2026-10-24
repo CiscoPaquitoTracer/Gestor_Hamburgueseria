@@ -1,5 +1,5 @@
 # Imagen para compilar y probar la app en CI (Jenkins).
-# JDK 21: AGP 9 exige JDK 17+, y es el mismo que usa GitHub Actions.
+# JDK 25 (LTS): AGP 9 exige JDK 17+ y Gradle 9 ya corre sobre Java 25.
 FROM eclipse-temurin:25-jdk-jammy
 
 # Versiones del proyecto (app/build.gradle.kts: compileSdk = 37; AGP 9.4 usa build-tools 36.0.0).
@@ -10,8 +10,10 @@ ARG ANDROID_BUILD_TOOLS=36.0.0
 ARG CMDLINE_TOOLS_VERSION=16111833
 ARG CMDLINE_TOOLS_SHA1=e025545c62a8e64c7559119566a569fb1dec5f60
 
+# Jenkins corre el contenedor con un usuario sin HOME (HOME=/): AGP necesita dónde escribir.
 ENV ANDROID_HOME=/opt/android-sdk \
-    ANDROID_SDK_ROOT=/opt/android-sdk
+    ANDROID_SDK_ROOT=/opt/android-sdk \
+    ANDROID_USER_HOME=/tmp/.android
 ENV PATH="${PATH}:${ANDROID_HOME}/cmdline-tools/latest/bin:${ANDROID_HOME}/platform-tools"
 
 RUN apt-get update \
@@ -31,4 +33,5 @@ RUN yes | sdkmanager --licenses > /dev/null \
         "platforms;android-${ANDROID_COMPILE_SDK}" \
         "build-tools;${ANDROID_BUILD_TOOLS}" \
     # Jenkins ejecuta el contenedor con un usuario no root.
-    && chmod -R a+rwX "${ANDROID_HOME}"
+    && chmod -R a+rwX "${ANDROID_HOME}" \
+    && mkdir -p "${ANDROID_USER_HOME}" && chmod 1777 "${ANDROID_USER_HOME}"

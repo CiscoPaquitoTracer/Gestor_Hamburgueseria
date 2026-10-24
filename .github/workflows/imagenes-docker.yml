@@ -1,0 +1,50 @@
+# Construye las imágenes de Jenkins cuando cambian (por ejemplo, un PR de Dependabot que
+# sube la versión del JDK). Sin esto, un FROM roto solo se descubriría al correr Jenkins.
+name: Imágenes Docker
+
+on:
+  push:
+    branches: [main, develop]
+    paths: ["ci/**", "infra/jenkins/**", ".github/workflows/imagenes-docker.yml"]
+  pull_request:
+    branches: [main, develop]
+    paths: ["ci/**", "infra/jenkins/**", ".github/workflows/imagenes-docker.yml"]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: imagenes-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  android-ci:
+    name: Imagen de compilación (ci/Dockerfile)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construir imagen
+        run: docker build -t android-ci ci
+
+      # Lo mismo que hace el Jenkinsfile, con un usuario no root como Jenkins.
+      - name: Compilar la app dentro de la imagen
+        run: >
+          docker run --rm -u "$(id -u):$(id -g)" -v "$PWD:/w" -w /w
+          -e GRADLE_USER_HOME=/w/.gradle-home -e GRADLE_OPTS=-Dorg.gradle.daemon=false
+          android-ci ./gradlew --console=plain testDebugUnitTest assembleDebug
+
+  jenkins:
+    name: Imagen de Jenkins (infra/jenkins)
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Construir imagen
+        run: docker build -t monchosos-jenkins infra/jenkins
+
+      - name: Verificar CLI de Docker
+        run: docker run --rm --entrypoint docker monchosos-jenkins --version

@@ -5,6 +5,8 @@ import com.example.hamgurgueseria_monchosos.data.menu.CategoriaMenu
 import com.example.hamgurgueseria_monchosos.data.menu.Eleccion
 import com.example.hamgurgueseria_monchosos.data.menu.Menu
 import com.example.hamgurgueseria_monchosos.data.menu.OpcionCombo
+import com.example.hamgurgueseria_monchosos.data.menu.PrecioDb
+import com.example.hamgurgueseria_monchosos.data.menu.VarianteDb
 import com.example.hamgurgueseria_monchosos.data.menu.armarRenglon
 import com.example.hamgurgueseria_monchosos.data.parsearPesos
 import com.example.hamgurgueseria_monchosos.data.pedidos.EstadoPedido
@@ -49,6 +51,36 @@ class MenuTest {
         assertEquals("Aderezo Hula Hula", Menu.nombreCompleto(Menu.producto("aderezo-2")))
         val nombres = Menu.productos.map(Menu::nombreCompleto)
         assertEquals(nombres.size, nombres.toSet().size)
+    }
+
+    @Test
+    fun precios_de_supabase_reemplazan_a_los_de_respaldo() {
+        try {
+            Menu.actualizar(listOf(
+                PrecioDb(10, "Burgers", "Sweet Bacon", precio = 9900, activo = true),
+                PrecioDb(11, "Doggos Jumbo", "Junior", precio = 4000, activo = false),
+                PrecioDb(12, "Alitas", "Alitas", precio = null, activo = true, variantes = listOf(
+                    VarianteDb(20, "5 piezas", 8000, activo = true),
+                    VarianteDb(21, "10 piezas", 15000, activo = false),
+                )),
+            ))
+            val sweet = Menu.producto("burger-sweet-bacon")
+            assertEquals(9900L, sweet.precio)
+            assertEquals(10L, sweet.dbId)
+            assertEquals(9900L, armarRenglon(sweet).getOrThrow().precioUnitario)
+            // "Junior" de Doggos no se confunde con el de Burgers.
+            assertEquals(false, Menu.producto("doggo-junior").activo)
+            assertEquals(7500L, Menu.producto("burger-junior").precio)
+            assertEquals(true, Menu.producto("burger-junior").activo)
+
+            val alitas = Menu.producto("alitas")
+            assertEquals(listOf("alitas-5"), alitas.variantesActivas.map { it.id })
+            assertEquals(8000L, alitas.precioDesde)
+            assertEquals(15000L, alitas.variante("alitas-10")!!.precio)
+        } finally {
+            Menu.actualizar(emptyList())   // deja el menú de respaldo para las demás pruebas
+        }
+        assertEquals(9000L, Menu.producto("burger-sweet-bacon").precio)
     }
 }
 

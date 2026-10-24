@@ -8,7 +8,7 @@ Guía de los pasos que hay que hacer **a mano** para que Jenkins compile y prueb
 GitHub ──webhook──► Jenkins (infra/jenkins, Docker Compose)
                        │ usa el Docker de la computadora (docker.sock)
                        ▼
-                    Contenedor de build (ci/Dockerfile: JDK 21 + Android SDK 37)
+                    Contenedor de build (ci/Dockerfile: JDK 25 + Android SDK 37)
                        └─ Jenkinsfile: Lint → Unit Tests → Build Debug → Build Release (solo main)
 ```
 
@@ -33,7 +33,9 @@ Llena `DOCKER_GID` en `.env`:
 docker compose up -d --build
 ```
 
-Jenkins queda en **http://localhost:8080**. Solo es accesible desde esa computadora, a propósito.
+Jenkins queda en **http://localhost:8080** (o el puerto que pongas en `JENKINS_PORT` dentro de `.env`, si el 8080 ya está ocupado, por ejemplo por XAMPP). Solo es accesible desde esa computadora, a propósito.
+
+El pipeline `monchosos` ya viene creado (`infra/jenkins/jobs/monchosos/config.xml`): revisa GitHub cada 5 minutos y solo construye ramas y PRs del propio repo, nunca de forks. Solo le falta la credencial `github-token` (paso 3). Puedes saltarte el paso 4.
 
 ## 2. Contraseña inicial
 
