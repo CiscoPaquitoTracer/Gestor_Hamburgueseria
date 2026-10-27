@@ -388,6 +388,55 @@ BEGIN
     RAISE NOTICE '✔ 11. Pronóstico';
 END $$;
 
+-- 12. Resumen del mes ----------------------------------------------------------
+-- Marzo 2020 (vacío salvo lo que se crea aquí): 2 ventas de la app, una cancelada,
+-- historial importado y un gasto. Febrero: historial para comparar.
+DO $$
+DECLARE
+    v bigint; j jsonb;
+    sb bigint := pg_temp.prod('Burgers', 'Sweet Bacon');
+    mx text := 'America/Mexico_City';
+BEGIN
+    UPDATE insumos SET costo_unitario = 0;
+    UPDATE insumos SET costo_unitario = 7 WHERE nombre = 'Pan para hamburguesa';
+
+    -- Vie 6: 2 Sweet Bacon ($180) − $20 de descuento = $160, pagado $100 efectivo + $60 transferencia.
+    INSERT INTO ventas (fecha) VALUES ('2020-03-06 14:00' AT TIME ZONE mx) RETURNING id INTO v;
+    INSERT INTO venta_detalle (venta_id, producto_id, cantidad, precio_unitario) VALUES (v, sb, 2, 90);
+    UPDATE ventas SET descuento = 20, motivo_descuento = 'prueba' WHERE id = v;
+    INSERT INTO pagos (venta_id, metodo, monto) VALUES (v, 'efectivo', 100), (v, 'transferencia', 60);
+    -- Sáb 7: 1 Hula Hula $95 sin cobrar; y una cancelada que no cuenta.
+    INSERT INTO ventas (fecha) VALUES ('2020-03-07 15:00' AT TIME ZONE mx) RETURNING id INTO v;
+    INSERT INTO venta_detalle (venta_id, producto_id, precio_unitario) VALUES (v, pg_temp.prod('Burgers', 'Hula Hula'), 95);
+    INSERT INTO ventas (fecha, estado) VALUES ('2020-03-07 16:00' AT TIME ZONE mx, 'cancelada');
+    -- Historial: vie 13, 2 alitas de 5 ($75 c/u, estimado $150). El vie 6 ya está en la app: se ignora.
+    INSERT INTO historial_ventas (dia, producto_id, variante_id, cantidad, fuente) VALUES
+        ('2020-03-13', pg_temp.prod('Alitas', 'Alitas'),
+         (SELECT id FROM variantes WHERE producto_id = pg_temp.prod('Alitas', 'Alitas') AND nombre = '5 piezas'), 2, 'prueba'),
+        ('2020-03-06', sb, NULL, 50, 'prueba'),
+        ('2020-02-14', pg_temp.prod('Refrescos', 'Boing 500 ml'), NULL, 1, 'prueba');
+    INSERT INTO gastos (fecha, categoria, monto) VALUES ('2020-03-10 12:00' AT TIME ZONE mx, 'otro', 200);
+
+    j := resumen_mes('2020-03-20');
+    ASSERT (j ->> 'ventas')::numeric = 405, format('Ventas 160 + 95 + 150 = 405, da %s', j ->> 'ventas');
+    ASSERT (j ->> 'ventas_estimadas')::numeric = 150, 'Lo del historial va como estimado';
+    ASSERT (j ->> 'ventas_mes_anterior')::numeric = 20, 'Febrero: un Boing';
+    ASSERT (j ->> 'pedidos')::int = 2, 'La cancelada no cuenta';
+    ASSERT (j ->> 'productos')::numeric = 5, format('2 SB + 1 Hula + 2 alitas = 5, da %s', j ->> 'productos');
+    ASSERT (j ->> 'dias_abiertos')::int = 3, 'Abrió el 6, 7 y 13';
+    ASSERT (j ->> 'descuentos')::numeric = 20 AND (j ->> 'por_cobrar')::numeric = 95, 'Descuentos y por cobrar';
+    ASSERT (j -> 'cobrado' ->> 'efectivo')::numeric = 100 AND (j -> 'cobrado' ->> 'transferencia')::numeric = 60,
+        'Cobrado por método';
+    ASSERT (j ->> 'costo_insumos')::numeric = 21, format('3 panes x $7 = 21, da %s', j ->> 'costo_insumos');
+    ASSERT (j ->> 'gastos')::numeric = 200, 'Gastos del mes';
+    ASSERT j -> 'top_productos' -> 0 ->> 'nombre' = 'Sweet Bacon', 'El más vendido (empata con alitas, gana por dinero)';
+    ASSERT j -> 'top_productos' -> 1 ->> 'nombre' = 'Alitas 5 piezas', 'Nombre con tamaño';
+    ASSERT (SELECT (x ->> 'total')::numeric FROM jsonb_array_elements(j -> 'por_dia_semana') x
+             WHERE (x ->> 'dia_semana')::int = 5) = 310, 'Viernes: 160 + 150';
+    ASSERT (resumen_mes('2019-01-01') ->> 'ventas')::numeric = 0, 'Mes sin datos = 0';
+    RAISE NOTICE '✔ 12. Resumen del mes';
+END $$;
+
 -- 8. Seguridad (RLS) -----------------------------------------------------------
 DO $$ BEGIN
     ASSERT NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -410,6 +459,11 @@ DO $$ BEGIN
         RAISE EXCEPTION 'anon no debería poder ver el pronóstico';
     EXCEPTION WHEN insufficient_privilege THEN NULL;
     END;
+    BEGIN
+        PERFORM resumen_mes('2020-03-01');
+        RAISE EXCEPTION 'anon no debería poder ver el resumen';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
 END $$;
 RESET ROLE;
 
@@ -421,6 +475,7 @@ DO $$ BEGIN
     ASSERT (SELECT count(*) FROM usuarios_permitidos) = 0, 'Ni la lista de autorizados';
     ASSERT (SELECT sum(dias_historial) FROM pronostico_dias(7)) = 0, 'Ni el historial de ventas en el pronóstico';
     ASSERT NOT EXISTS (SELECT 1 FROM pronostico_insumos(current_date + 7)), 'Ni el consumo de insumos';
+    ASSERT (resumen_mes('2020-03-01') ->> 'ventas')::numeric = 0, 'Ni las ventas del mes';
     BEGIN
         INSERT INTO gastos (categoria, monto) VALUES ('otro', 1);
         RAISE EXCEPTION 'Un correo no autorizado no debería poder registrar gastos';

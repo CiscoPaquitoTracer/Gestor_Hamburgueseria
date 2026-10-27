@@ -7,6 +7,7 @@ import com.example.hamgurgueseria_monchosos.data.InventarioRepository
 import com.example.hamgurgueseria_monchosos.data.menu.MenuRepository
 import com.example.hamgurgueseria_monchosos.data.pedidos.PedidosRepository
 import com.example.hamgurgueseria_monchosos.data.pronostico.PronosticoRepository
+import com.example.hamgurgueseria_monchosos.data.resumen.ResumenRepository
 import com.example.hamgurgueseria_monchosos.data.remoto.crearSupabase
 import kotlinx.coroutines.MainScope
 
@@ -18,6 +19,7 @@ class HamburgueseriaApp : Application() {
     val pedidos by lazy { PedidosRepository(supabase) }
     val menu by lazy { MenuRepository(supabase) }
     val pronostico by lazy { PronosticoRepository(supabase) }
+    val resumen by lazy { ResumenRepository(supabase) }
 
     override fun onCreate() {
         super.onCreate()

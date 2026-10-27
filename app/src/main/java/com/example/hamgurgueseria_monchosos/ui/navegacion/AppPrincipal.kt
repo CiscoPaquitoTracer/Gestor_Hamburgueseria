@@ -30,6 +30,7 @@ import com.example.hamgurgueseria_monchosos.auth.Usuario
 import com.example.hamgurgueseria_monchosos.data.InventarioRepository
 import com.example.hamgurgueseria_monchosos.data.menu.MenuRepository
 import com.example.hamgurgueseria_monchosos.data.pronostico.PronosticoRepository
+import com.example.hamgurgueseria_monchosos.data.resumen.ResumenRepository
 import com.example.hamgurgueseria_monchosos.data.pedidos.PedidosRepository
 import com.example.hamgurgueseria_monchosos.ui.comun.ActualizarPeriodicamente
 import com.example.hamgurgueseria_monchosos.ui.inicio.InicioScreen
@@ -43,11 +44,14 @@ import com.example.hamgurgueseria_monchosos.ui.pedidos.PedidoEditorScreen
 import com.example.hamgurgueseria_monchosos.ui.pedidos.PedidoEditorViewModel
 import com.example.hamgurgueseria_monchosos.ui.pedidos.PedidosScreen
 import com.example.hamgurgueseria_monchosos.ui.pedidos.PedidosViewModel
+import com.example.hamgurgueseria_monchosos.ui.resumen.ResumenScreen
+import com.example.hamgurgueseria_monchosos.ui.resumen.ResumenViewModel
 
 /** Secciones de la barra inferior. Para agregar una basta con sumarla aquí y en el NavHost. */
 private enum class Seccion(val ruta: String, val titulo: String, val icono: String) {
     INICIO("inicio", "Inicio", "🏠"),
     PEDIDOS("pedidos", "Pedidos", "🧾"),
+    RESUMEN("resumen", "Resumen", "📊"),
     INVENTARIO("inventario", "Inventario", "📦"),
     MENU("menu", "Menú", "🍔"),
 }
@@ -69,6 +73,7 @@ fun AppPrincipal(
     pedidos: PedidosRepository,
     menu: MenuRepository,
     pronostico: PronosticoRepository,
+    resumen: ResumenRepository,
     onCerrarSesion: () -> Unit,
 ) {
     val nav = rememberNavController()
@@ -81,6 +86,7 @@ fun AppPrincipal(
     val pedidosVm: PedidosViewModel = viewModel { PedidosViewModel(pedidos) }
     val menuVm: MenuViewModel = viewModel { MenuViewModel(menu) }
     val pronosticoVm: PronosticoViewModel = viewModel { PronosticoViewModel(pronostico) }
+    val resumenVm: ResumenViewModel = viewModel { ResumenViewModel(resumen) }
     PedirPermisoNotificaciones()
     // Precios del menú al día en toda la app (los cambia el otro teléfono también).
     ActualizarPeriodicamente(cadaMs = 120_000) { menuVm.refrescar() }
@@ -136,6 +142,7 @@ fun AppPrincipal(
                     onAbrir = { nav.navigate(Rutas.pedido(it)) },
                 )
             }
+            composable(Seccion.RESUMEN.ruta) { ResumenScreen(resumenVm) }
             composable(Seccion.INVENTARIO.ruta) { InventarioScreen(inventarioVm) }
             composable(Seccion.MENU.ruta) { MenuScreen(menuVm) }
 

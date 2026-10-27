@@ -2,13 +2,15 @@
 Convierte Comandas.xlsx (ventas de antes de la app) en SQL para la tabla historial_ventas,
 que usa el pronóstico de ventas e insumos.
 
-El Excel NO tiene fechas: cada hoja (Junio, Julio) tiene bloques de 7 columnas, uno por día,
-acomodados en renglones que son semanas (columna A, H, O, V = 1.º, 2.º, 3.º y 4.º día que abren).
-Por eso hay que decir qué días de la semana abrían y, si se sabe, la fecha del primer bloque.
+El Excel NO tiene fechas: cada hoja (Junio, Julio) tiene bloques de 7 columnas, uno por día.
+Los bloques se leen en orden (renglón por renglón, de izquierda a derecha) y se asignan a los
+días que abren, seguidos: con --dias vie,sab,dom el 1.º bloque es el primer viernes del mes,
+el 2.º el sábado, el 3.º el domingo, el 4.º el viernes siguiente… Si se sabe la fecha del
+primer bloque, se da con --inicio.
 
 Uso (requiere openpyxl; el Excel y el SQL generado NO se suben al repo, que es público):
-    python importar_comandas.py Comandas.xlsx --anio 2026 --dias mie,jue,vie,sab > comandas.sql
-    python importar_comandas.py Comandas.xlsx --anio 2026 --dias mie,jue,vie,sab --inicio Junio=2026-06-03
+    python importar_comandas.py Comandas.xlsx --anio 2026 --dias vie,sab,dom > comandas.sql
+    python importar_comandas.py Comandas.xlsx --anio 2026 --dias vie,sab,dom --inicio Junio=2026-06-05
 
 Después: aplicar comandas.sql en Supabase. Se puede volver a correr: primero borra lo
 importado antes desde este mismo archivo.
@@ -73,20 +75,22 @@ def leer_bloque(ws, r0: int, c0: int):
 
 
 def fechas_de_hoja(ws, anio: int, mes: int, dias: list, inicio):
-    """[(fecha, r0, c0)]: renglón de bloques = semana; columna = día de la semana."""
+    """[(fecha, r0, c0)]: los bloques, en orden de lectura, van a los días que abren seguidos."""
     bloques = sorted((c.row, c.column) for fila in ws.iter_rows() for c in fila if c.value == "Menú")
-    semanas = sorted({r for r, _ in bloques})
-    if inicio is None:   # primer día de la semana de apertura que cae en ese mes
-        inicio = dt.date(anio, mes, 1)
-        while inicio.weekday() != DIAS[dias[0]]:
-            inicio += dt.timedelta(days=1)
+    abiertos = {DIAS[d] for d in dias}
+    fecha = inicio
+    if fecha is None:   # primer día de apertura del mes (ej. primer viernes)
+        fecha = dt.date(anio, mes, 1)
+        while fecha.weekday() != DIAS[dias[0]]:
+            fecha += dt.timedelta(days=1)
+    if fecha.weekday() not in abiertos:
+        raise SystemExit(f"{ws.title}: {fecha} no es un día que abran ({','.join(dias)})")
     resultado = []
     for r0, c0 in bloques:
-        semana, columna = semanas.index(r0), (c0 - 1) // 7
-        if columna >= len(dias):
-            raise SystemExit(f"{ws.title}: hay más columnas de días que los dados en --dias")
-        corrimiento = (DIAS[dias[columna]] - DIAS[dias[0]]) % 7
-        resultado.append((inicio + dt.timedelta(days=7 * semana + corrimiento), r0, c0))
+        resultado.append((fecha, r0, c0))
+        fecha += dt.timedelta(days=1)
+        while fecha.weekday() not in abiertos:
+            fecha += dt.timedelta(days=1)
     return resultado
 
 
