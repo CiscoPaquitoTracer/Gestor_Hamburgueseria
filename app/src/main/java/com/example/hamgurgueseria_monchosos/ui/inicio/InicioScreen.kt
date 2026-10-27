@@ -36,11 +36,14 @@ fun InicioScreen(
     usuario: Usuario,
     vm: InventarioViewModel,
     pedidosVm: PedidosViewModel,
+    pronosticoVm: PronosticoViewModel,
     onNuevoPedido: () -> Unit,
 ) {
     val estado by vm.estado.collectAsStateWithLifecycle()
     val hoy by pedidosVm.resumenHoy.collectAsStateWithLifecycle()
     val error by pedidosVm.error.collectAsStateWithLifecycle()
+    val pronostico by pronosticoVm.pronostico.collectAsStateWithLifecycle()
+    ActualizarPeriodicamente(cadaMs = 300_000) { pronosticoVm.refrescar() }
     ActualizarPeriodicamente {
         pedidosVm.refrescar()
         vm.refrescar()
@@ -80,6 +83,8 @@ fun InicioScreen(
                 }
             }
         }
+
+        pronostico?.let { PronosticoCard(it) }
 
         Text("Inventario", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
         Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {

@@ -315,6 +315,63 @@ BEGIN
     RAISE NOTICE '✔ 10. Funciones de la app';
 END $$;
 
+-- 11. Pronóstico de ventas e insumos -----------------------------------------
+-- Mañana (T) se estima con el mismo día de la semana; un festivo, con festivos anteriores.
+DO $$
+DECLARE
+    hoy date := (now() AT TIME ZONE 'America/Mexico_City')::date;
+    t   date := (now() AT TIME ZONE 'America/Mexico_City')::date + 1;
+    sb  bigint := pg_temp.prod('Burgers', 'Sweet Bacon');
+    dia date; n int; v bigint; r record; pan_hoy numeric; pan_hasta numeric; f record;
+BEGIN
+    ASSERT (SELECT count(*) FROM dias_festivos WHERE fecha = '2026-04-03' AND nombre = 'Viernes Santo') = 1,
+        'Calcula Semana Santa (Pascua 2026 = 5 de abril)';
+    ASSERT (SELECT fecha FROM dias_festivos WHERE nombre = 'Revolución Mexicana' AND extract(year FROM fecha) = 2026)
+        = '2026-11-16', 'Revolución: tercer lunes de noviembre';
+    ASSERT (SELECT fecha FROM dias_festivos WHERE nombre = 'Día del Padre' AND extract(year FROM fecha) = 2027)
+        = '2027-06-20', 'Día del Padre: tercer domingo de junio';
+
+    -- Calendario controlado: solo un festivo pasado (T-30) y uno próximo (T+1).
+    DELETE FROM dias_festivos;
+    INSERT INTO dias_festivos (fecha, nombre) VALUES (t - 30, 'Festivo pasado'), (t + 1, 'Festivo de prueba');
+
+    -- Historial: 2 pedidos en cada uno de los 3 días previos con el mismo día de la semana que T,
+    -- 1 pedido el día anterior a hoy hace una semana, y 5 en el festivo pasado. 1 Sweet Bacon por pedido.
+    FOR dia, n IN SELECT * FROM (VALUES (t - 7, 2), (t - 14, 2), (t - 21, 2), (t - 8, 1), (t - 30, 5)) AS x LOOP
+        FOR i IN 1..n LOOP
+            INSERT INTO ventas (fecha) VALUES ((dia + time '14:00') AT TIME ZONE 'America/Mexico_City') RETURNING id INTO v;
+            INSERT INTO venta_detalle (venta_id, producto_id) VALUES (v, sb);
+        END LOOP;
+    END LOOP;
+    -- Una cancelada no cuenta.
+    INSERT INTO ventas (fecha, estado) VALUES ((t - 7 + time '15:00') AT TIME ZONE 'America/Mexico_City', 'cancelada');
+
+    SELECT * INTO r FROM pronostico_dias(3) WHERE fecha = t;
+    ASSERT r.festivo IS NULL AND r.dias_historial = 3, format('T usa 3 días de referencia, usa %s', r.dias_historial);
+    ASSERT r.pedidos_esperados = 2, format('T: 2 pedidos esperados, hay %s', r.pedidos_esperados);
+    ASSERT r.pedidos_promedio > 0, 'Promedio general calculado';
+
+    SELECT * INTO f FROM pronostico_dias(3) WHERE fecha = t + 1;
+    ASSERT f.festivo = 'Festivo de prueba' AND f.dias_historial = 1, 'El festivo se estima con festivos anteriores';
+    ASSERT f.pedidos_esperados = 5, format('Festivo: 5 pedidos esperados, hay %s', f.pedidos_esperados);
+    ASSERT (SELECT count(*) FROM pronostico_dias(3)) = 3, 'Un renglón por día';
+
+    -- Insumos de T y T+1 (sin contar hoy): 2 + 5 panes; 0.3 kg de carne por burger.
+    pan_hoy   := coalesce((SELECT consumo_esperado FROM pronostico_insumos(hoy) WHERE nombre = 'Pan para hamburguesa'), 0);
+    pan_hasta := (SELECT consumo_esperado FROM pronostico_insumos(t + 1) WHERE nombre = 'Pan para hamburguesa');
+    ASSERT pan_hasta - pan_hoy = 7, format('Pan para T y T+1 = 7, da %s', pan_hasta - pan_hoy);
+
+    -- Con 3 panes en existencia hay que comprar lo que falte (stock mínimo 0).
+    UPDATE insumos SET stock_minimo = 0 WHERE nombre = 'Pan para hamburguesa';
+    INSERT INTO movimientos_inventario (insumo_id, tipo, cantidad)
+    SELECT id, 'ajuste', 3 - cantidad FROM insumos WHERE nombre = 'Pan para hamburguesa' AND cantidad <> 3;
+    ASSERT (SELECT por_comprar FROM pronostico_insumos(t + 1) WHERE nombre = 'Pan para hamburguesa') = pan_hasta - 3,
+        'por_comprar = consumo esperado − existencia';
+    ASSERT NOT EXISTS (SELECT 1 FROM pronostico_insumos(t + 1) WHERE nombre = 'Refresco Boing 500 ml'),
+        'Lo que no se ha vendido no aparece';
+    RAISE NOTICE '✔ 11. Pronóstico';
+END $$;
+
 -- 8. Seguridad (RLS) -----------------------------------------------------------
 DO $$ BEGIN
     ASSERT NOT EXISTS (SELECT 1 FROM pg_proc p JOIN pg_namespace n ON n.oid = p.pronamespace
@@ -332,6 +389,11 @@ DO $$ BEGIN
         RAISE EXCEPTION 'anon no debería poder leer productos';
     EXCEPTION WHEN insufficient_privilege THEN NULL;
     END;
+    BEGIN
+        PERFORM pronostico_dias(7);
+        RAISE EXCEPTION 'anon no debería poder ver el pronóstico';
+    EXCEPTION WHEN insufficient_privilege THEN NULL;
+    END;
 END $$;
 RESET ROLE;
 
@@ -341,6 +403,8 @@ SELECT set_config('request.jwt.claims', '{"email":"intruso@gmail.com","role":"au
 DO $$ BEGIN
     ASSERT (SELECT count(*) FROM productos) = 0, 'Un correo no autorizado no debe ver el menú';
     ASSERT (SELECT count(*) FROM usuarios_permitidos) = 0, 'Ni la lista de autorizados';
+    ASSERT (SELECT sum(dias_historial) FROM pronostico_dias(7)) = 0, 'Ni el historial de ventas en el pronóstico';
+    ASSERT NOT EXISTS (SELECT 1 FROM pronostico_insumos(current_date + 7)), 'Ni el consumo de insumos';
     BEGIN
         INSERT INTO gastos (categoria, monto) VALUES ('otro', 1);
         RAISE EXCEPTION 'Un correo no autorizado no debería poder registrar gastos';

@@ -1,5 +1,10 @@
 package com.example.hamgurgueseria_monchosos.ui.navegacion
 
+import android.Manifest
+import android.content.pm.PackageManager
+import android.os.Build
+import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.NavigationBar
@@ -9,7 +14,10 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
+import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.navigation.NavGraph.Companion.findStartDestination
 import androidx.navigation.NavType
@@ -21,9 +29,11 @@ import androidx.navigation.navArgument
 import com.example.hamgurgueseria_monchosos.auth.Usuario
 import com.example.hamgurgueseria_monchosos.data.InventarioRepository
 import com.example.hamgurgueseria_monchosos.data.menu.MenuRepository
+import com.example.hamgurgueseria_monchosos.data.pronostico.PronosticoRepository
 import com.example.hamgurgueseria_monchosos.data.pedidos.PedidosRepository
 import com.example.hamgurgueseria_monchosos.ui.comun.ActualizarPeriodicamente
 import com.example.hamgurgueseria_monchosos.ui.inicio.InicioScreen
+import com.example.hamgurgueseria_monchosos.ui.inicio.PronosticoViewModel
 import com.example.hamgurgueseria_monchosos.ui.inventario.InventarioScreen
 import com.example.hamgurgueseria_monchosos.ui.inventario.InventarioViewModel
 import com.example.hamgurgueseria_monchosos.ui.menu.MenuScreen
@@ -58,6 +68,7 @@ fun AppPrincipal(
     inventario: InventarioRepository,
     pedidos: PedidosRepository,
     menu: MenuRepository,
+    pronostico: PronosticoRepository,
     onCerrarSesion: () -> Unit,
 ) {
     val nav = rememberNavController()
@@ -69,6 +80,8 @@ fun AppPrincipal(
     val inventarioVm: InventarioViewModel = viewModel { InventarioViewModel(inventario) }
     val pedidosVm: PedidosViewModel = viewModel { PedidosViewModel(pedidos) }
     val menuVm: MenuViewModel = viewModel { MenuViewModel(menu) }
+    val pronosticoVm: PronosticoViewModel = viewModel { PronosticoViewModel(pronostico) }
+    PedirPermisoNotificaciones()
     // Precios del menú al día en toda la app (los cambia el otro teléfono también).
     ActualizarPeriodicamente(cadaMs = 120_000) { menuVm.refrescar() }
 
@@ -114,7 +127,7 @@ fun AppPrincipal(
     ) { padding ->
         NavHost(nav, startDestination = Seccion.INICIO.ruta, modifier = Modifier.padding(padding)) {
             composable(Seccion.INICIO.ruta) {
-                InicioScreen(usuario, inventarioVm, pedidosVm, onNuevoPedido = { nav.navigate(Rutas.PEDIDO_NUEVO) })
+                InicioScreen(usuario, inventarioVm, pedidosVm, pronosticoVm, onNuevoPedido = { nav.navigate(Rutas.PEDIDO_NUEVO) })
             }
             composable(Seccion.PEDIDOS.ruta) {
                 PedidosScreen(
@@ -147,5 +160,18 @@ fun AppPrincipal(
                 PedidoEditorScreen(vm, onGuardado = { nav.popBackStack() })
             }
         }
+    }
+}
+
+/** Android 13+ pide permiso para notificar; se pregunta una vez al entrar (avisos de reabasto). */
+@Composable
+private fun PedirPermisoNotificaciones() {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU) return
+    val contexto = LocalContext.current
+    val lanzador = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+    LaunchedEffect(Unit) {
+        val concedido = ContextCompat.checkSelfPermission(contexto, Manifest.permission.POST_NOTIFICATIONS) ==
+            PackageManager.PERMISSION_GRANTED
+        if (!concedido) lanzador.launch(Manifest.permission.POST_NOTIFICATIONS)
     }
 }

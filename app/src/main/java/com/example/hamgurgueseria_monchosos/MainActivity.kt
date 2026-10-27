@@ -46,6 +46,7 @@ class MainActivity : ComponentActivity() {
                             inventario = app.inventario,
                             pedidos = app.pedidos,
                             menu = app.menu,
+                            pronostico = app.pronostico,
                             onCerrarSesion = { scope.launch { auth.cerrarSesion() } },
                         )
                     }
