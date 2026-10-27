@@ -16,10 +16,10 @@ class PronosticoTest {
     private fun semana(
         diaSemanaHoy: Int,
         festivos: Map<Int, String> = emptyMap(),
-        pedidos: (DiaPronostico) -> Double? = { if (it.especial) 30.0 else 20.0 },
+        productos: (DiaPronostico) -> Double? = { if (it.especial) 30.0 else 20.0 },
     ): List<DiaPronostico> = (0 until 7).map { i ->
         val base = DiaPronostico("2026-11-%02d".format(i + 1), (diaSemanaHoy - 1 + i) % 7 + 1, festivos[i])
-        base.copy(pedidosEsperados = pedidos(base), pedidosPromedio = 22.0, diasHistorial = 4)
+        base.copy(productosEsperados = productos(base), productosPromedio = 22.0, diasHistorial = 4)
     }
 
     private val pan = InsumoPorComprar("Pan para hamburguesa", Unidad.PIEZA, 10.0, 32.3, 22.3)
@@ -59,7 +59,7 @@ class PronosticoTest {
         val (titulo, cuerpo) = mensajeDeAviso(e, listOf(pan))!!
         assertEquals("Se viene el fin de semana", titulo)
         assertTrue(cuerpo, "36 % más" in cuerpo)          // 60 esperados / 44 normales
-        assertTrue(cuerpo, "~60 pedidos" in cuerpo)
+        assertTrue(cuerpo, "~60 productos" in cuerpo)
         assertTrue(cuerpo, "Pan para hamburguesa: 23 pz" in cuerpo)   // 22.3 piezas → 23
     }
 
@@ -74,11 +74,11 @@ class PronosticoTest {
 
     @Test
     fun sin_historial_no_inventa_numeros() {
-        val vacio = semana(diaSemanaHoy = 4) { null }.map { it.copy(pedidosPromedio = null, diasHistorial = 0) }
+        val vacio = semana(diaSemanaHoy = 4) { null }.map { it.copy(productosPromedio = null, diasHistorial = 0) }
         val e = proximoEvento(vacio)!!
         assertNull(e.aumento)
         val (_, cuerpo) = mensajeDeAviso(e, listOf(pan))!!
-        assertTrue(cuerpo, "pedidos" !in cuerpo)
+        assertTrue(cuerpo, "productos" !in cuerpo)
     }
 
     @Test

@@ -42,11 +42,11 @@ private data class DiaFila(
     val fecha: String,
     @SerialName("dia_semana") val diaSemana: Int,
     val festivo: String? = null,
-    @SerialName("pedidos_esperados") val pedidosEsperados: Double? = null,
-    @SerialName("pedidos_promedio") val pedidosPromedio: Double? = null,
+    @SerialName("productos_esperados") val productosEsperados: Double? = null,
+    @SerialName("productos_promedio") val productosPromedio: Double? = null,
     @SerialName("dias_historial") val diasHistorial: Int = 0,
 ) {
-    fun aModelo() = DiaPronostico(fecha, diaSemana, festivo, pedidosEsperados, pedidosPromedio, diasHistorial)
+    fun aModelo() = DiaPronostico(fecha, diaSemana, festivo, productosEsperados, productosPromedio, diasHistorial)
 }
 
 @Serializable

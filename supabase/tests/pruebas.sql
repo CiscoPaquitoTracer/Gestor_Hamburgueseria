@@ -348,12 +348,12 @@ BEGIN
 
     SELECT * INTO r FROM pronostico_dias(3) WHERE fecha = t;
     ASSERT r.festivo IS NULL AND r.dias_historial = 3, format('T usa 3 días de referencia, usa %s', r.dias_historial);
-    ASSERT r.pedidos_esperados = 2, format('T: 2 pedidos esperados, hay %s', r.pedidos_esperados);
-    ASSERT r.pedidos_promedio > 0, 'Promedio general calculado';
+    ASSERT r.productos_esperados = 2, format('T: 2 productos esperados, hay %s', r.productos_esperados);
+    ASSERT r.productos_promedio > 0, 'Promedio general calculado';
 
     SELECT * INTO f FROM pronostico_dias(3) WHERE fecha = t + 1;
     ASSERT f.festivo = 'Festivo de prueba' AND f.dias_historial = 1, 'El festivo se estima con festivos anteriores';
-    ASSERT f.pedidos_esperados = 5, format('Festivo: 5 pedidos esperados, hay %s', f.pedidos_esperados);
+    ASSERT f.productos_esperados = 5, format('Festivo: 5 productos esperados, hay %s', f.productos_esperados);
     ASSERT (SELECT count(*) FROM pronostico_dias(3)) = 3, 'Un renglón por día';
 
     -- Insumos de T y T+1 (sin contar hoy): 2 + 5 panes; 0.3 kg de carne por burger.
@@ -369,6 +369,22 @@ BEGIN
         'por_comprar = consumo esperado − existencia';
     ASSERT NOT EXISTS (SELECT 1 FROM pronostico_insumos(t + 1) WHERE nombre = 'Refresco Boing 500 ml'),
         'Lo que no se ha vendido no aparece';
+
+    -- Historial importado (Comandas.xlsx): un día viejo con el mismo día de la semana que T.
+    -- 10 Sweet Bacon + 1 Solitario (cuyo Sweet Bacon va como componente). En T-7 también se
+    -- "importan" 100, pero ese día ya está en la app: se ignoran.
+    INSERT INTO historial_ventas (dia, producto_id, cantidad, componente, fuente) VALUES
+        (t - 35, sb, 10, false, 'prueba'),
+        (t - 35, pg_temp.prod('Combos', 'Solitario'), 1, false, 'prueba'),
+        (t - 35, sb, 1, true, 'prueba'),
+        (t - 7, sb, 100, false, 'prueba');
+    ASSERT (SELECT x.productos FROM v_ventas_por_dia x WHERE x.dia = t - 35) = 11, 'El combo cuenta 1 vez, su componente no';
+    ASSERT (SELECT x.productos FROM v_ventas_por_dia x WHERE x.dia = t - 7) = 2, 'Si el día está en la app, manda la app';
+    SELECT * INTO r FROM pronostico_dias(2) WHERE fecha = t;
+    ASSERT r.dias_historial = 4 AND r.productos_esperados = 4.3,
+        format('T con historial importado: (2+2+2+11)/4 ≈ 4.3, da %s con %s días', r.productos_esperados, r.dias_historial);
+    pan_hasta := (SELECT consumo_esperado FROM pronostico_insumos(t) WHERE nombre = 'Pan para hamburguesa');
+    ASSERT pan_hasta - pan_hoy = 4.25, format('Pan para T = (2+2+2+11)/4 = 4.25, da %s', pan_hasta - pan_hoy);
     RAISE NOTICE '✔ 11. Pronóstico';
 END $$;
 

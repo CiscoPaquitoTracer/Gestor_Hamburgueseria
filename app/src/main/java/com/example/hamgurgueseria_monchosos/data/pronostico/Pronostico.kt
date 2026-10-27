@@ -13,9 +13,9 @@ data class DiaPronostico(
     val diaSemana: Int,
     val festivo: String? = null,
     /** null = sin historial para estimar. */
-    val pedidosEsperados: Double? = null,
+    val productosEsperados: Double? = null,
     /** Promedio de un día cualquiera, para comparar. */
-    val pedidosPromedio: Double? = null,
+    val productosPromedio: Double? = null,
     val diasHistorial: Int = 0,
 ) {
     val finDeSemana: Boolean get() = diaSemana >= 6
@@ -23,8 +23,8 @@ data class DiaPronostico(
 
     /** Se espera vender claramente más que un día normal (15 % o más). */
     val fuerte: Boolean
-        get() = pedidosEsperados != null && pedidosPromedio != null && pedidosPromedio > 0 &&
-            pedidosEsperados >= pedidosPromedio * UMBRAL_FUERTE
+        get() = productosEsperados != null && productosPromedio != null && productosPromedio > 0 &&
+            productosEsperados >= productosPromedio * UMBRAL_FUERTE
 
     companion object {
         const val UMBRAL_FUERTE = 1.15
@@ -62,14 +62,14 @@ data class Evento(val dias: List<DiaPronostico>) {
             }
         }
 
-    val pedidosEsperados: Double get() = dias.sumOf { it.pedidosEsperados ?: 0.0 }
+    val productosEsperados: Double get() = dias.sumOf { it.productosEsperados ?: 0.0 }
 
     /** Cuánto más que días normales (0.25 = 25 % más), si hay datos. */
     val aumento: Double?
         get() {
-            val conDatos = dias.filter { it.pedidosEsperados != null && (it.pedidosPromedio ?: 0.0) > 0 }
+            val conDatos = dias.filter { it.productosEsperados != null && (it.productosPromedio ?: 0.0) > 0 }
             if (conDatos.isEmpty()) return null
-            return conDatos.sumOf { it.pedidosEsperados!! } / conDatos.sumOf { it.pedidosPromedio!! } - 1
+            return conDatos.sumOf { it.productosEsperados!! } / conDatos.sumOf { it.productosPromedio!! } - 1
         }
 }
 
@@ -93,7 +93,7 @@ fun mensajeDeAviso(evento: Evento, porComprar: List<InsumoPorComprar>): Pair<Str
         evento.aumento?.takeIf { evento.fuerte }?.let {
             append("Sueles vender ${(it * 100).toInt()} % más. ")
         }
-        if (evento.conHistorial) append("Esperamos ~${evento.pedidosEsperados.toInt()} pedidos. ")
+        if (evento.conHistorial) append("Esperamos vender ~${evento.productosEsperados.toInt()} productos. ")
         if (porComprar.isEmpty()) {
             append("Tus insumos alcanzan ✅")
         } else {

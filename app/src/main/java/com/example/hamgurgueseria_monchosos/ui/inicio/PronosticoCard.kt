@@ -16,7 +16,7 @@ import androidx.compose.ui.unit.dp
 import com.example.hamgurgueseria_monchosos.data.pronostico.Pronostico
 import com.example.hamgurgueseria_monchosos.data.pronostico.nombreDelDia
 
-/** "Se viene el fin de semana": pedidos esperados y qué comprar para cubrirlo. */
+/** "Se viene el fin de semana": productos que se espera vender y qué comprar para cubrirlo. */
 @Composable
 fun PronosticoCard(p: Pronostico) {
     val evento = p.evento
@@ -51,7 +51,8 @@ fun PronosticoCard(p: Pronostico) {
                         Modifier.weight(1f),
                     )
                     Text(
-                        d.pedidosEsperados?.let { "~${it.toInt()} pedidos" + if (d.fuerte) " ↑" else "" } ?: "sin datos",
+                        // Con historial en otros días, un día sin ventas registradas es un día que no abren.
+                        d.productosEsperados?.let { "~${it.toInt()} productos" + if (d.fuerte) " ↑" else "" } ?: "no suele abrir",
                         fontWeight = if (d.fuerte) FontWeight.Bold else FontWeight.Normal,
                     )
                 }

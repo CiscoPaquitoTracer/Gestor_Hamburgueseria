@@ -4,9 +4,12 @@
 --
 -- Con el historial se estima cada día por separado:
 --   * festivo → como los festivos anteriores (último año);
---   * si no   → como el mismo día de la semana (sin festivos) de las últimas 12 semanas;
---   * sin historial de ese tipo → promedio de todos los días con ventas de las últimas 12 semanas.
+--   * si no   → como los últimos 8 días con ese mismo día de la semana (sin festivos);
+--   * sin historial de ese tipo → promedio de los últimos 28 días con ventas, solo mientras haya
+--     menos de 8 días de historial (después, un día de la semana sin ventas = no abren).
 -- Solo cuentan los días que hubo ventas (los días cerrados no bajan el promedio).
+-- Se mide en PRODUCTOS vendidos (no en pedidos): así se puede sumar el historial de
+-- antes de la app (Comandas.xlsx), que solo tiene cuántos de cada producto se vendieron.
 -- =====================================================================
 
 -- Calendario de festivos ----------------------------------------------------
@@ -71,21 +74,68 @@ INSERT INTO dias_festivos (fecha, nombre, oficial)
 VALUES ('2030-10-01', 'Transmisión del Poder Ejecutivo', true)
 ON CONFLICT (fecha) DO NOTHING;
 
--- Historial por día (fecha de México) ---------------------------------------
-CREATE VIEW v_ventas_por_dia WITH (security_invoker = true) AS
-SELECT (fecha AT TIME ZONE 'America/Mexico_City')::date AS dia, count(*) AS pedidos
-  FROM ventas
- WHERE estado <> 'cancelada'
- GROUP BY 1;
+-- Historial de antes de la app ------------------------------------------------
+-- Totales por día y producto (ej. Comandas.xlsx). No son pedidos: no entran al corte de
+-- caja ni a los reportes, solo al pronóstico. Los combos se guardan dos veces: el combo
+-- (componente = false, cuenta como producto vendido) y lo que lleva dentro (componente = true,
+-- solo para calcular insumos).
+CREATE TABLE historial_ventas (
+    id           bigint GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
+    dia          date          NOT NULL,
+    producto_id  bigint        NOT NULL REFERENCES productos (id),
+    variante_id  bigint        REFERENCES variantes (id),
+    cantidad     numeric(10,2) NOT NULL CHECK (cantidad > 0),
+    componente   boolean       NOT NULL DEFAULT false,
+    fuente       text          NOT NULL,
+    UNIQUE NULLS NOT DISTINCT (dia, producto_id, variante_id, componente)
+);
+CREATE INDEX ON historial_ventas (dia);
 
--- Insumo gastado por día, según la fecha del pedido (salidas por venta, incluidos los combos).
+ALTER TABLE historial_ventas ENABLE ROW LEVEL SECURITY;
+CREATE POLICY equipo_todo ON historial_ventas FOR ALL TO authenticated
+    USING ((SELECT es_usuario_permitido())) WITH CHECK ((SELECT es_usuario_permitido()));
+REVOKE ALL ON historial_ventas FROM anon;
+
+-- Historial por día (fecha de México) ---------------------------------------
+-- Productos vendidos por día. Si un día está en la app y en el historial importado,
+-- manda la app (no se cuenta dos veces).
+CREATE VIEW v_ventas_por_dia WITH (security_invoker = true) AS
+WITH app AS (
+    SELECT (v.fecha AT TIME ZONE 'America/Mexico_City')::date AS dia, sum(d.cantidad) AS productos
+      FROM ventas v
+      JOIN venta_detalle d ON d.venta_id = v.id
+     WHERE v.estado <> 'cancelada'
+     GROUP BY 1
+)
+SELECT dia, productos FROM app
+UNION ALL
+SELECT h.dia, sum(h.cantidad)
+  FROM historial_ventas h
+ WHERE NOT h.componente AND h.dia NOT IN (SELECT dia FROM app)
+ GROUP BY h.dia;
+
+-- Insumo gastado por día: salidas por venta de la app (incluidos los combos) y, para los
+-- días importados, lo que marcan las recetas.
 CREATE VIEW v_consumo_por_dia WITH (security_invoker = true) AS
-SELECT (v.fecha AT TIME ZONE 'America/Mexico_City')::date AS dia, m.insumo_id, -sum(m.cantidad) AS cantidad
-  FROM movimientos_inventario m
-  LEFT JOIN venta_componentes c ON c.id = m.venta_componente_id
-  JOIN venta_detalle d          ON d.id = coalesce(m.venta_detalle_id, c.detalle_id)
-  JOIN ventas v                 ON v.id = d.venta_id
- WHERE m.tipo = 'venta'
+WITH app AS (
+    SELECT (v.fecha AT TIME ZONE 'America/Mexico_City')::date AS dia, m.insumo_id, -sum(m.cantidad) AS cantidad
+      FROM movimientos_inventario m
+      LEFT JOIN venta_componentes c ON c.id = m.venta_componente_id
+      JOIN venta_detalle d          ON d.id = coalesce(m.venta_detalle_id, c.detalle_id)
+      JOIN ventas v                 ON v.id = d.venta_id
+     WHERE m.tipo = 'venta'
+     GROUP BY 1, 2
+),
+dias_app AS (
+    SELECT DISTINCT (fecha AT TIME ZONE 'America/Mexico_City')::date AS dia FROM ventas WHERE estado <> 'cancelada'
+)
+SELECT dia, insumo_id, cantidad FROM app
+UNION ALL
+SELECT h.dia, r.insumo_id, sum(r.cantidad * h.cantidad)
+  FROM historial_ventas h
+  JOIN recetas r ON r.producto_id = h.producto_id
+                AND (r.variante_id IS NULL OR r.variante_id = h.variante_id)
+ WHERE h.dia NOT IN (SELECT dia FROM dias_app)
  GROUP BY 1, 2;
 
 -- Días del historial con los que se estima p_fecha (ver reglas arriba).
@@ -103,23 +153,29 @@ BEGIN
 
     RETURN QUERY
         SELECT v.dia FROM v_ventas_por_dia v
-         WHERE v.dia >= hoy - 84 AND v.dia < hoy
+         WHERE v.dia < hoy
            AND extract(isodow FROM v.dia) = extract(isodow FROM p_fecha)
-           AND NOT EXISTS (SELECT 1 FROM dias_festivos f WHERE f.fecha = v.dia);
+           AND NOT EXISTS (SELECT 1 FROM dias_festivos f WHERE f.fecha = v.dia)
+         ORDER BY v.dia DESC
+         LIMIT 8;
     IF FOUND THEN RETURN; END IF;
 
-    RETURN QUERY
-        SELECT v.dia FROM v_ventas_por_dia v WHERE v.dia >= hoy - 84 AND v.dia < hoy;
+    -- Con poco historial (menos de 8 días) se usa el promedio general. Con más, si ese día de
+    -- la semana nunca ha tenido ventas es que no abren: no se inventa una estimación.
+    IF (SELECT count(*) FROM v_ventas_por_dia v WHERE v.dia < hoy) < 8 THEN
+        RETURN QUERY
+            SELECT v.dia FROM v_ventas_por_dia v WHERE v.dia < hoy ORDER BY v.dia DESC LIMIT 28;
+    END IF;
 END $$;
 
 -- API de la app -------------------------------------------------------------
 
--- Pedidos esperados para los próximos p_dias (empezando hoy).
--- pedidos_promedio = promedio de todos los días con ventas (12 semanas), para comparar.
+-- Productos que se espera vender en los próximos p_dias (empezando hoy).
+-- productos_promedio = promedio de los últimos 28 días con ventas, para comparar.
 -- dias_historial = cuántos días del pasado respaldan la estimación (0 = sin datos).
 -- dia_semana: 1 = lunes … 7 = domingo.
 CREATE FUNCTION pronostico_dias(p_dias int DEFAULT 7)
-RETURNS TABLE (fecha date, dia_semana int, festivo text, pedidos_esperados numeric, pedidos_promedio numeric,
+RETURNS TABLE (fecha date, dia_semana int, festivo text, productos_esperados numeric, productos_promedio numeric,
                dias_historial int)
 LANGUAGE sql STABLE SET search_path = public, interno AS $$
     WITH hoy AS (SELECT (now() AT TIME ZONE 'America/Mexico_City')::date AS d),
@@ -128,10 +184,11 @@ LANGUAGE sql STABLE SET search_path = public, interno AS $$
     ),
     refs AS (SELECT d.fecha, r.dia FROM dias d CROSS JOIN LATERAL dias_referencia(d.fecha) r),
     promedio AS (
-        SELECT avg(v.pedidos) AS p FROM v_ventas_por_dia v, hoy WHERE v.dia >= hoy.d - 84 AND v.dia < hoy.d
+        SELECT avg(x.productos) AS p
+          FROM (SELECT v.productos FROM v_ventas_por_dia v, hoy WHERE v.dia < hoy.d ORDER BY v.dia DESC LIMIT 28) x
     )
     SELECT d.fecha, extract(isodow FROM d.fecha)::int, f.nombre,
-           round(avg(v.pedidos), 1),
+           round(avg(v.productos), 1),
            round((SELECT p FROM promedio), 1),
            count(refs.dia)::int
       FROM dias d
