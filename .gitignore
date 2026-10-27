@@ -56,4 +56,5 @@ Documentacion_Monchosos.docx
 CI_CD_PLAN.md
 # SQL generado por supabase/importar_comandas.py (trae las ventas reales del negocio)
 comandas*.sql
-Comandas*.xlsx
+# Excels del negocio (ventas, precios): datos reales, el repo es público
+*.xlsx
