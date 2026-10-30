@@ -1,6 +1,8 @@
 package com.example.hamgurgueseria_monchosos.ui.login
 
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
@@ -10,6 +12,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
@@ -25,12 +28,15 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.example.hamgurgueseria_monchosos.R
 import com.example.hamgurgueseria_monchosos.auth.GoogleAuthClient
 import com.example.hamgurgueseria_monchosos.auth.ResultadoLogin
 import com.example.hamgurgueseria_monchosos.ui.theme.HamgurgueseriamonchososTheme
@@ -73,8 +79,13 @@ private fun LoginContenido(
         horizontalAlignment = Alignment.CenterHorizontally,
         verticalArrangement = Arrangement.Center,
     ) {
-        Text("🍔", fontSize = 72.sp)
-        Spacer(Modifier.height(8.dp))
+        // El mismo dibujo del ícono de la app, sobre su fondo café.
+        Image(
+            painterResource(R.mipmap.ic_launcher_foreground),
+            contentDescription = null,
+            modifier = Modifier.size(120.dp).clip(CircleShape).background(MaterialTheme.colorScheme.primary),
+        )
+        Spacer(Modifier.height(16.dp))
         Text(
             "Monchosos",
             style = MaterialTheme.typography.headlineLarge,

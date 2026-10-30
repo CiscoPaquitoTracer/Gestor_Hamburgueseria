@@ -5,18 +5,31 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.Notes
+import androidx.compose.material.icons.outlined.Close
+import androidx.compose.material.icons.outlined.Edit
+import androidx.compose.material.icons.outlined.Payments
+import androidx.compose.material.icons.outlined.Person
+import androidx.compose.material.icons.outlined.Phone
+import androidx.compose.material.icons.outlined.Place
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
-import androidx.compose.material3.Card
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
@@ -40,10 +53,15 @@ import com.example.hamgurgueseria_monchosos.data.formatearHora
 import com.example.hamgurgueseria_monchosos.data.parsearPesos
 import com.example.hamgurgueseria_monchosos.data.pedidos.EstadoPedido
 import com.example.hamgurgueseria_monchosos.data.pedidos.MetodoPago
+import com.example.hamgurgueseria_monchosos.data.pedidos.Pago
 import com.example.hamgurgueseria_monchosos.data.pedidos.PedidoCompleto
 import com.example.hamgurgueseria_monchosos.data.remoto.mensajeDeError
 import com.example.hamgurgueseria_monchosos.ui.comun.ActualizarPeriodicamente
 import com.example.hamgurgueseria_monchosos.ui.comun.AvisoError
+import com.example.hamgurgueseria_monchosos.ui.comun.DialogoConfirmar
+import com.example.hamgurgueseria_monchosos.ui.comun.Panel
+import com.example.hamgurgueseria_monchosos.ui.comun.TextoConIcono
+import com.example.hamgurgueseria_monchosos.ui.comun.icono
 
 @Composable
 fun PedidoDetalleScreen(
@@ -81,34 +99,39 @@ private fun DetalleContenido(p: PedidoCompleto, vm: PedidosViewModel, onEditar: 
     val pedido = p.pedido
     val cancelado = pedido.estado == EstadoPedido.CANCELADO
     var cobrando by remember { mutableStateOf(false) }
-    var confirmarCancelar by remember { mutableStateOf(false) }
-    var confirmarEliminar by remember { mutableStateOf(false) }
+    var confirmar by remember { mutableStateOf<Confirmacion?>(null) }
+    var pagoPorRegistrar by remember { mutableStateOf<Pair<MetodoPago, Long>?>(null) }
 
     Column(
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
         // Encabezado ---------------------------------------------------------
-        Card(Modifier.fillMaxWidth()) {
+        Panel(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(pedido.tipoEntrega.icono, contentDescription = null, tint = MaterialTheme.colorScheme.primary)
                     Text(
-                        "${pedido.tipoEntrega.emoji} ${pedido.tipoEntrega.etiqueta}",
+                        pedido.tipoEntrega.etiqueta,
                         style = MaterialTheme.typography.titleMedium,
-                        modifier = Modifier.weight(1f),
+                        modifier = Modifier.weight(1f).padding(start = 8.dp),
                     )
                     EstadoTexto(pedido.estado)
                 }
-                Text(formatearFechaHora(pedido.creadoEn), style = MaterialTheme.typography.bodySmall)
-                if (pedido.cliente.isNotBlank()) Text("👤 ${pedido.cliente}")
-                if (pedido.telefono.isNotBlank()) Text("📞 ${pedido.telefono}")
-                if (pedido.direccion.isNotBlank()) Text("📍 ${pedido.direccion}")
-                if (pedido.notas.isNotBlank()) Text("📝 ${pedido.notas}")
+                Text(
+                    formatearFechaHora(pedido.creadoEn),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+                if (pedido.cliente.isNotBlank()) TextoConIcono(Icons.Outlined.Person, pedido.cliente)
+                if (pedido.telefono.isNotBlank()) TextoConIcono(Icons.Outlined.Phone, pedido.telefono)
+                if (pedido.direccion.isNotBlank()) TextoConIcono(Icons.Outlined.Place, pedido.direccion)
+                if (pedido.notas.isNotBlank()) TextoConIcono(Icons.AutoMirrored.Outlined.Notes, pedido.notas)
             }
         }
 
         // Productos ----------------------------------------------------------
-        Card(Modifier.fillMaxWidth()) {
+        Panel(Modifier.fillMaxWidth()) {
             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
                 p.renglones.forEach { r ->
                     Row {
@@ -125,9 +148,9 @@ private fun DetalleContenido(p: PedidoCompleto, vm: PedidosViewModel, onEditar: 
 
         // Pagos ----------------------------------------------------------------
         if (p.pagos.isNotEmpty()) {
-            Card(Modifier.fillMaxWidth()) {
+            Panel(Modifier.fillMaxWidth()) {
                 Column(Modifier.padding(16.dp)) {
-                    Text("Pagos", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                    Text("Pagos", style = MaterialTheme.typography.titleMedium)
                     p.pagos.forEach { pago ->
                         Row(verticalAlignment = Alignment.CenterVertically) {
                             Text(
@@ -135,7 +158,11 @@ private fun DetalleContenido(p: PedidoCompleto, vm: PedidosViewModel, onEditar: 
                                 modifier = Modifier.weight(1f),
                             )
                             Text(formatearCentavos(pago.monto))
-                            if (!cancelado) TextButton(onClick = { vm.borrarPago(pago) }) { Text("Quitar") }
+                            if (!cancelado) {
+                                IconButton(onClick = { confirmar = Confirmacion.QuitarPago(pago) }) {
+                                    Icon(Icons.Outlined.Close, contentDescription = "Quitar pago")
+                                }
+                            }
                         }
                     }
                 }
@@ -144,30 +171,29 @@ private fun DetalleContenido(p: PedidoCompleto, vm: PedidosViewModel, onEditar: 
 
         // Acciones -------------------------------------------------------------
         if (!cancelado && p.pendiente > 0) {
-            Button(onClick = { cobrando = true }, modifier = Modifier.fillMaxWidth()) {
-                Text("Cobrar ${formatearCentavos(p.pendiente)}")
+            Button(onClick = { cobrando = true }, modifier = Modifier.fillMaxWidth().height(52.dp)) {
+                Icon(Icons.Outlined.Payments, contentDescription = null)
+                Spacer(Modifier.width(8.dp))
+                Text("Cobrar ${formatearCentavos(p.pendiente)}", style = MaterialTheme.typography.titleMedium)
             }
         }
         if (!cancelado) {
-            OutlinedButton(onClick = onEditar, modifier = Modifier.fillMaxWidth()) { Text("Editar pedido") }
+            OutlinedButton(onClick = onEditar, modifier = Modifier.fillMaxWidth()) {
+                Icon(Icons.Outlined.Edit, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text("Editar pedido")
+            }
         }
         FlowRow(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
             if (cancelado) {
-                TextButton(onClick = { vm.reabrir(pedido.id) }) { Text("Reabrir pedido") }
+                TextButton(onClick = { confirmar = Confirmacion.Reabrir }) { Text("Reabrir pedido") }
             } else {
-                TextButton(onClick = {
-                    if (confirmarCancelar) vm.cancelar(pedido.id) else confirmarCancelar = true
-                }) {
-                    Text(if (confirmarCancelar) "Toca otra vez para cancelar" else "Cancelar pedido",
-                        color = MaterialTheme.colorScheme.error)
+                TextButton(onClick = { confirmar = Confirmacion.Cancelar }) {
+                    Text("Cancelar pedido", color = MaterialTheme.colorScheme.error)
                 }
             }
-            TextButton(onClick = {
-                // Al borrarse, el flujo emite null y la pantalla se cierra sola.
-                if (confirmarEliminar) vm.eliminar(pedido.id) else confirmarEliminar = true
-            }) {
-                Text(if (confirmarEliminar) "Toca otra vez para eliminar" else "Eliminar",
-                    color = MaterialTheme.colorScheme.error)
+            TextButton(onClick = { confirmar = Confirmacion.Eliminar }) {
+                Text("Eliminar", color = MaterialTheme.colorScheme.error)
             }
         }
     }
@@ -175,10 +201,65 @@ private fun DetalleContenido(p: PedidoCompleto, vm: PedidosViewModel, onEditar: 
     if (cobrando) {
         CobrarDialog(
             pendiente = p.pendiente,
-            onCobrar = { metodo, monto -> vm.cobrar(pedido.id, metodo, monto); cobrando = false },
+            onCobrar = { metodo, monto -> pagoPorRegistrar = metodo to monto; cobrando = false },
             onCerrar = { cobrando = false },
         )
     }
+
+    pagoPorRegistrar?.let { (metodo, monto) ->
+        DialogoConfirmar(
+            titulo = "¿Registrar el pago?",
+            texto = "${formatearCentavos(monto)} en ${metodo.etiqueta.lowercase()} para el pedido #${pedido.id}.",
+            accion = "Registrar",
+            onConfirmar = { vm.cobrar(pedido.id, metodo, monto) },
+            onCerrar = { pagoPorRegistrar = null },
+        )
+    }
+
+    when (val c = confirmar) {
+        null -> Unit
+        is Confirmacion.QuitarPago -> DialogoConfirmar(
+            titulo = "¿Quitar este pago?",
+            texto = "${formatearCentavos(c.pago.monto)} en ${c.pago.metodo.etiqueta.lowercase()}. El pedido volverá a quedar por cobrar.",
+            accion = "Quitar pago",
+            peligroso = true,
+            onConfirmar = { vm.borrarPago(c.pago) },
+            onCerrar = { confirmar = null },
+        )
+        Confirmacion.Reabrir -> DialogoConfirmar(
+            titulo = "¿Reabrir el pedido #${pedido.id}?",
+            texto = "Vuelve a contar en las ventas y se descuentan otra vez sus insumos.",
+            accion = "Reabrir",
+            onConfirmar = { vm.reabrir(pedido.id) },
+            onCerrar = { confirmar = null },
+        )
+        Confirmacion.Cancelar -> DialogoConfirmar(
+            titulo = "¿Cancelar el pedido #${pedido.id}?",
+            texto = "Deja de contar en las ventas y sus insumos regresan al inventario. Se puede reabrir después.",
+            accion = "Cancelar pedido",
+            cancelar = "No",
+            peligroso = true,
+            onConfirmar = { vm.cancelar(pedido.id) },
+            onCerrar = { confirmar = null },
+        )
+        // Al borrarse, el flujo emite null y la pantalla se cierra sola.
+        Confirmacion.Eliminar -> DialogoConfirmar(
+            titulo = "¿Eliminar el pedido #${pedido.id}?",
+            texto = "Se borra con sus productos y pagos, y sus insumos regresan al inventario. No se puede deshacer.",
+            accion = "Eliminar",
+            peligroso = true,
+            onConfirmar = { vm.eliminar(pedido.id) },
+            onCerrar = { confirmar = null },
+        )
+    }
+}
+
+/** Acciones del detalle que se confirman antes de aplicarse. */
+private sealed interface Confirmacion {
+    data class QuitarPago(val pago: Pago) : Confirmacion
+    data object Reabrir : Confirmacion
+    data object Cancelar : Confirmacion
+    data object Eliminar : Confirmacion
 }
 
 @Composable

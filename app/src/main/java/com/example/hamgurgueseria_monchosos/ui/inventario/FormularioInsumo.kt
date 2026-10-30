@@ -8,8 +8,8 @@ import com.example.hamgurgueseria_monchosos.data.Unidad
 data class FormularioInsumo(
     val id: Long = 0,
     val nombre: String = "",
-    val categoria: Categoria = Categoria.INGREDIENTE,
-    val unidad: Unidad = Categoria.INGREDIENTE.unidadSugerida,
+    val categoria: Categoria = Categoria.CARNES,
+    val unidad: Unidad = Categoria.CARNES.unidadSugerida,
     val cantidad: String = "",
     val stockMinimo: String = "",
     val costoUnitario: String = "",

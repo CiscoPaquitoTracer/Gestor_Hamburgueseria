@@ -4,6 +4,8 @@
 
     <!-- Supabase (HTTPS). -->
     <uses-permission android:name="android.permission.INTERNET" />
+    <!-- Avisos de reabasto antes de fines de semana y festivos (Android 13+ lo pide al usuario). -->
+    <uses-permission android:name="android.permission.POST_NOTIFICATIONS" />
 
     <application
         android:name=".HamburgueseriaApp"

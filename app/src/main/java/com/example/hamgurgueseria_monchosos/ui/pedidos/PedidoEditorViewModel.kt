@@ -25,7 +25,11 @@ data class EditorUiState(
     val cargando: Boolean = false,
     val guardando: Boolean = false,
     val error: String? = null,
+    /** Como estaba al abrir el editor, para saber si hay algo sin guardar. */
+    val pedidoOriginal: Pedido = Pedido(),
+    val renglonesOriginales: List<Renglon> = emptyList(),
 ) {
+    val hayCambios: Boolean get() = pedido != pedidoOriginal || renglones != renglonesOriginales
     val total: Long get() = renglones.sumOf { it.subtotal }
     val articulos: Int get() = renglones.sumOf { it.cantidad }
 }
@@ -50,6 +54,8 @@ class PedidoEditorViewModel(
                         else -> it.copy(
                             pedido = existente.pedido,
                             renglones = existente.renglones,
+                            pedidoOriginal = existente.pedido,
+                            renglonesOriginales = existente.renglones,
                             paso = PasoEditor.RESUMEN,
                             cargando = false,
                         )

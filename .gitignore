@@ -54,3 +54,7 @@ infra/jenkins/.env
 # Documentacion local (no se sube)
 Documentacion_Monchosos.docx
 CI_CD_PLAN.md
+# SQL generado por supabase/importar_comandas.py (trae las ventas reales del negocio)
+comandas*.sql
+# Excels del negocio (ventas, precios): datos reales, el repo es público
+*.xlsx
