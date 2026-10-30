@@ -25,6 +25,8 @@ import androidx.compose.ui.unit.dp
 import com.example.hamgurgueseria_monchosos.data.Categoria
 import com.example.hamgurgueseria_monchosos.data.Insumo
 import com.example.hamgurgueseria_monchosos.data.Unidad
+import com.example.hamgurgueseria_monchosos.data.formatearCantidad
+import com.example.hamgurgueseria_monchosos.ui.comun.DialogoConfirmar
 
 /** Alta / edición de un insumo. [inicial] null = nuevo. */
 @Composable
@@ -37,6 +39,7 @@ fun InsumoDialog(
     var form by remember { mutableStateOf(inicial?.let(FormularioInsumo::desde) ?: FormularioInsumo()) }
     var error by remember { mutableStateOf<String?>(null) }
     var confirmarBorrado by remember { mutableStateOf(false) }
+    var guardando by remember { mutableStateOf<Insumo?>(null) }
     val abrev = form.unidad.abreviatura
 
     AlertDialog(
@@ -89,13 +92,8 @@ fun InsumoDialog(
                 error?.let { Text(it, color = MaterialTheme.colorScheme.error) }
 
                 if (inicial != null) {
-                    TextButton(onClick = {
-                        if (confirmarBorrado) onEliminar(inicial) else confirmarBorrado = true
-                    }) {
-                        Text(
-                            if (confirmarBorrado) "Toca otra vez para confirmar" else "Eliminar insumo",
-                            color = MaterialTheme.colorScheme.error,
-                        )
+                    TextButton(onClick = { confirmarBorrado = true }) {
+                        Text("Eliminar insumo", color = MaterialTheme.colorScheme.error)
                     }
                 }
             }
@@ -103,12 +101,37 @@ fun InsumoDialog(
         confirmButton = {
             TextButton(onClick = {
                 form.validar()
-                    .onSuccess(onGuardar)
+                    .onSuccess { guardando = it }
                     .onFailure { error = it.message }
             }) { Text("Guardar") }
         },
         dismissButton = { TextButton(onClick = onCerrar) { Text("Cancelar") } },
     )
+
+    guardando?.let { insumo ->
+        DialogoConfirmar(
+            titulo = if (inicial == null) "¿Agregar ${insumo.nombre}?" else "¿Guardar cambios?",
+            texto = if (inicial == null) {
+                "Se dará de alta con ${formatearCantidad(insumo.cantidad, insumo.unidad)}."
+            } else {
+                "Se actualizará ${insumo.nombre} en los dos teléfonos."
+            },
+            accion = if (inicial == null) "Agregar" else "Guardar",
+            onConfirmar = { onGuardar(insumo) },
+            onCerrar = { guardando = null },
+        )
+    }
+
+    if (confirmarBorrado && inicial != null) {
+        DialogoConfirmar(
+            titulo = "¿Eliminar ${inicial.nombre}?",
+            texto = "Dejará de aparecer en el inventario y en el pronóstico de compras.",
+            accion = "Eliminar",
+            peligroso = true,
+            onConfirmar = { onEliminar(inicial) },
+            onCerrar = { confirmarBorrado = false },
+        )
+    }
 }
 
 @Composable

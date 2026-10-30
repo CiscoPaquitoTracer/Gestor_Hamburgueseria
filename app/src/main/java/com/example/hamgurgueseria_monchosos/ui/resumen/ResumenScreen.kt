@@ -7,17 +7,22 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
-import androidx.compose.material3.Card
-import androidx.compose.material3.CardDefaults
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowLeft
+import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
+import androidx.compose.material.icons.automirrored.filled.TrendingDown
+import androidx.compose.material.icons.automirrored.filled.TrendingUp
 import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -32,6 +37,10 @@ import com.example.hamgurgueseria_monchosos.data.formatearCentavos
 import com.example.hamgurgueseria_monchosos.data.pedidos.MetodoPago
 import com.example.hamgurgueseria_monchosos.data.resumen.Resumen
 import com.example.hamgurgueseria_monchosos.ui.comun.AvisoError
+import com.example.hamgurgueseria_monchosos.ui.comun.Dato
+import com.example.hamgurgueseria_monchosos.ui.comun.Panel
+import com.example.hamgurgueseria_monchosos.ui.comun.PanelDestacado
+import com.example.hamgurgueseria_monchosos.ui.theme.Exito
 import kotlin.math.abs
 
 private val DIAS = listOf("Lunes", "Martes", "Miércoles", "Jueves", "Viernes", "Sábado", "Domingo")
@@ -44,15 +53,18 @@ fun ResumenScreen(vm: ResumenViewModel) {
 
     Column(Modifier.fillMaxSize()) {
         Row(Modifier.fillMaxWidth().padding(horizontal = 8.dp), verticalAlignment = Alignment.CenterVertically) {
-            TextButton(onClick = { vm.moverMes(-1) }) { Text("◀") }
+            IconButton(onClick = { vm.moverMes(-1) }) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowLeft, contentDescription = "Mes anterior")
+            }
             Text(
                 s.titulo,
                 Modifier.weight(1f),
-                style = MaterialTheme.typography.titleLarge,
-                fontWeight = FontWeight.Bold,
+                style = MaterialTheme.typography.titleMedium,
                 textAlign = TextAlign.Center,
             )
-            TextButton(onClick = { vm.moverMes(+1) }, enabled = !s.esMesActual) { Text("▶") }
+            IconButton(onClick = { vm.moverMes(+1) }, enabled = !s.esMesActual) {
+                Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = "Mes siguiente")
+            }
         }
         AvisoError(s.error, onDescartar = vm::descartarError, onReintentar = vm::refrescar)
 
@@ -77,28 +89,30 @@ private fun Contenido(r: Resumen) {
         Modifier.fillMaxSize().verticalScroll(rememberScrollState()).padding(16.dp),
         verticalArrangement = Arrangement.spacedBy(12.dp),
     ) {
-        Card(
-            Modifier.fillMaxWidth(),
-            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.primaryContainer),
-        ) {
-            Column(Modifier.padding(16.dp)) {
-                Text("Vendido en el mes", style = MaterialTheme.typography.labelLarge)
-                Text(formatearCentavos(r.ventas), style = MaterialTheme.typography.displaySmall, fontWeight = FontWeight.Bold)
-                r.cambioVsAnterior?.let {
-                    val sube = it >= 0
+        PanelDestacado(Modifier.fillMaxWidth()) {
+            Text("Vendido en el mes", style = MaterialTheme.typography.bodySmall)
+            Text(formatearCentavos(r.ventas), style = MaterialTheme.typography.displaySmall)
+            r.cambioVsAnterior?.let {
+                val sube = it >= 0
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Icon(
+                        if (sube) Icons.AutoMirrored.Filled.TrendingUp else Icons.AutoMirrored.Filled.TrendingDown,
+                        contentDescription = if (sube) "Subió" else "Bajó",
+                        modifier = Modifier.size(18.dp),
+                    )
                     Text(
-                        "${if (sube) "▲" else "▼"} ${(abs(it) * 100).toInt()} % vs mes anterior (${formatearCentavos(r.ventasMesAnterior)})",
-                        color = if (sube) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
-                        fontWeight = FontWeight.SemiBold,
+                        "${(abs(it) * 100).toInt()} % vs mes anterior (${formatearCentavos(r.ventasMesAnterior)})",
+                        style = MaterialTheme.typography.bodyMedium,
+                        modifier = Modifier.padding(start = 6.dp),
                     )
                 }
-                if (r.ventasEstimadas > 0) {
-                    Text(
-                        "Incluye ${formatearCentavos(r.ventasEstimadas)} estimados del Excel (con los precios de hoy).",
-                        style = MaterialTheme.typography.bodySmall,
-                        modifier = Modifier.padding(top = 4.dp),
-                    )
-                }
+            }
+            if (r.ventasEstimadas > 0) {
+                Text(
+                    "Incluye ${formatearCentavos(r.ventasEstimadas)} estimados del Excel (con los precios de hoy).",
+                    style = MaterialTheme.typography.bodySmall,
+                    modifier = Modifier.padding(top = 4.dp),
+                )
             }
         }
 
@@ -122,7 +136,7 @@ private fun Contenido(r: Resumen) {
             Renglon(
                 "Ganancia",
                 formatearCentavos(r.ganancia),
-                if (r.ganancia >= 0) Color(0xFF2E7D32) else MaterialTheme.colorScheme.error,
+                if (r.ganancia >= 0) Exito else MaterialTheme.colorScheme.error,
                 negrita = true,
             )
             if (r.compras > 0) Renglon("Compras de insumos del mes", formatearCentavos(r.compras))
@@ -169,20 +183,11 @@ private fun Contenido(r: Resumen) {
 }
 
 @Composable
-private fun Dato(titulo: String, valor: String, modifier: Modifier = Modifier) {
-    Card(modifier) {
-        Column(Modifier.padding(12.dp)) {
-            Text(titulo, style = MaterialTheme.typography.labelMedium)
-            Text(valor, style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold)
-        }
-    }
-}
-
-@Composable
 private fun Seccion(titulo: String, contenido: @Composable () -> Unit) {
-    Card(Modifier.fillMaxWidth()) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(4.dp)) {
-            Text(titulo, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+    Panel(Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+            Text(titulo, style = MaterialTheme.typography.titleMedium)
+            HorizontalDivider(Modifier.padding(bottom = 2.dp))
             contenido()
         }
     }

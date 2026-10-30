@@ -1,4 +1,4 @@
-# Contexto del proyecto: Monchosos Gestor
+# Contexto del proyecto: Monchosos
 
 App Android para administrar una hamburguesería pequeña. Este documento explica **qué es, cómo está hecha y cómo se trabaja en ella**, para que cualquier persona (o asistente de IA) que llegue al proyecto entienda el contexto sin preguntar.
 
@@ -24,7 +24,7 @@ Barra inferior: **Inicio · Pedidos · Resumen · Inventario · Menú**.
 | Inicio | Ventas, pedidos y cobrado de **hoy** (se reinicia a medianoche); tarjeta de **pronóstico** (próximo fin de semana o festivo, productos esperados y qué comprar); inventario por agotarse. |
 | Pedidos | Lista con filtros **Por cobrar** (por defecto, solo los no pagados) · Hoy · Todos (últimos 300). Editor con el menú real (combos, tamaños, sabores, notas, entrega a domicilio), detalle, cobro con pagos divididos (efectivo, transferencia, tarjeta) y cálculo de cambio. |
 | Resumen | Resumen **del mes** con ◀ ▶: vendido y comparación con el mes anterior, pedidos, promedio por pedido, días abiertos, cobrado por método, por cobrar, descuentos, **ganancia estimada** (ventas − costo de lo vendido − gastos), 5 más vendidos y promedio por día de la semana. Incluye los meses importados del Excel (estimados con precios actuales). |
-| Inventario | Insumos por kg, litro o pieza; alta, edición, baja; botones − / +; aviso de stock mínimo. Cada venta **descuenta los insumos según la receta** (cancelar un pedido los devuelve). |
+| Inventario | Insumos agrupados por sección (carnes, lácteos, panes, verduras, aderezos y salsas, abarrotes, bebidas, desechables, otros), por kg, litro o pieza; alta, edición, baja; botones − / +; aviso de stock mínimo. Cada venta **descuenta los insumos según la receta** (cancelar un pedido los devuelve). |
 | Menú | Cambiar **precios** y marcar productos/tamaños como **no disponibles** (dejan de aparecer al tomar pedidos). Los pedidos ya hechos conservan su precio; cada cambio queda en `historial_precios`. |
 | Notificación | Diario a las 10:00 (WorkManager): si mañana o pasado empieza un fin de semana o festivo **y** se suele vender más (≥ 15 %) o faltan insumos, avisa qué comprar. |
 
@@ -76,7 +76,7 @@ app/src/main/java/com/example/hamgurgueseria_monchosos/
 
 ### Base de datos (Supabase)
 
-Esquema versionado como migraciones en [`supabase/migrations/`](supabase/README.md) (001 esquema … 007 endurecer acceso, **008 pronóstico**, **009 resumen**). Pruebas en [`supabase/tests/pruebas.sql`](supabase/tests/pruebas.sql) (12 grupos, incluyen RLS y suplantación), que corren en CI.
+Esquema versionado como migraciones en [`supabase/migrations/`](supabase/README.md) (001 esquema … 007 endurecer acceso, **008 pronóstico**, **009 resumen**, **010 categorías de insumo**). Pruebas en [`supabase/tests/pruebas.sql`](supabase/tests/pruebas.sql) (12 grupos, incluyen RLS y suplantación), que corren en CI.
 
 Las reglas de negocio viven en la base de datos: precios congelados por venta, estado pagado/por cobrar según pagos, descuento de inventario por receta (triggers), pedido completo en una transacción (`guardar_venta`), pronóstico y resumen.
 

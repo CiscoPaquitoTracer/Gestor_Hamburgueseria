@@ -5,7 +5,6 @@ import androidx.lifecycle.viewModelScope
 import com.example.hamgurgueseria_monchosos.data.Categoria
 import com.example.hamgurgueseria_monchosos.data.Insumo
 import com.example.hamgurgueseria_monchosos.data.InventarioRepository
-import com.example.hamgurgueseria_monchosos.data.Unidad
 import com.example.hamgurgueseria_monchosos.data.remoto.mensajeDeError
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -45,11 +44,8 @@ class InventarioViewModel(private val repo: InventarioRepository) : ViewModel() 
 
     fun eliminar(insumo: Insumo) = ejecutar { repo.eliminar(insumo) }
 
-    /** Botones rápidos: ±1 pieza o ±0.5 kg / litro. */
-    fun sumar(insumo: Insumo, signo: Int) {
-        val paso = if (insumo.unidad == Unidad.PIEZA) 1.0 else 0.5
-        ejecutar { repo.ajustarCantidad(insumo, paso * signo) }
-    }
+    /** Suma (o resta, si es negativo) a la existencia; lo confirma antes AjusteDialog. */
+    fun ajustar(insumo: Insumo, delta: Double) = ejecutar { repo.ajustarCantidad(insumo, delta) }
 
     fun descartarError() {
         _error.value = null

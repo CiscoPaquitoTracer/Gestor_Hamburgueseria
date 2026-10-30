@@ -3,19 +3,36 @@ package com.example.hamgurgueseria_monchosos.ui.navegacion
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
+import androidx.activity.compose.LocalOnBackPressedDispatcherOwner
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.padding
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
+import androidx.compose.material.icons.automirrored.outlined.ReceiptLong
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Inventory2
+import androidx.compose.material.icons.filled.RestaurantMenu
+import androidx.compose.material.icons.outlined.BarChart
+import androidx.compose.material.icons.outlined.Home
+import androidx.compose.material.icons.outlined.Inventory2
+import androidx.compose.material.icons.outlined.RestaurantMenu
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
+import androidx.compose.material3.NavigationBarItemDefaults
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
-import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -29,9 +46,9 @@ import androidx.navigation.navArgument
 import com.example.hamgurgueseria_monchosos.auth.Usuario
 import com.example.hamgurgueseria_monchosos.data.InventarioRepository
 import com.example.hamgurgueseria_monchosos.data.menu.MenuRepository
+import com.example.hamgurgueseria_monchosos.data.pedidos.PedidosRepository
 import com.example.hamgurgueseria_monchosos.data.pronostico.PronosticoRepository
 import com.example.hamgurgueseria_monchosos.data.resumen.ResumenRepository
-import com.example.hamgurgueseria_monchosos.data.pedidos.PedidosRepository
 import com.example.hamgurgueseria_monchosos.ui.comun.ActualizarPeriodicamente
 import com.example.hamgurgueseria_monchosos.ui.inicio.InicioScreen
 import com.example.hamgurgueseria_monchosos.ui.inicio.PronosticoViewModel
@@ -47,13 +64,16 @@ import com.example.hamgurgueseria_monchosos.ui.pedidos.PedidosViewModel
 import com.example.hamgurgueseria_monchosos.ui.resumen.ResumenScreen
 import com.example.hamgurgueseria_monchosos.ui.resumen.ResumenViewModel
 
-/** Secciones de la barra inferior. Para agregar una basta con sumarla aquí y en el NavHost. */
-private enum class Seccion(val ruta: String, val titulo: String, val icono: String) {
-    INICIO("inicio", "Inicio", "🏠"),
-    PEDIDOS("pedidos", "Pedidos", "🧾"),
-    RESUMEN("resumen", "Resumen", "📊"),
-    INVENTARIO("inventario", "Inventario", "📦"),
-    MENU("menu", "Menú", "🍔"),
+/**
+ * Secciones de la barra inferior (solo íconos; el nombre va en la barra de arriba). Para agregar
+ * una basta con sumarla aquí y en el NavHost.
+ */
+private enum class Seccion(val ruta: String, val titulo: String, val icono: ImageVector, val iconoActivo: ImageVector) {
+    INICIO("inicio", "Inicio", Icons.Outlined.Home, Icons.Filled.Home),
+    PEDIDOS("pedidos", "Pedidos", Icons.AutoMirrored.Outlined.ReceiptLong, Icons.AutoMirrored.Filled.ReceiptLong),
+    RESUMEN("resumen", "Resumen", Icons.Outlined.BarChart, Icons.Filled.BarChart),
+    INVENTARIO("inventario", "Inventario", Icons.Outlined.Inventory2, Icons.Filled.Inventory2),
+    MENU("menu", "Menú", Icons.Outlined.RestaurantMenu, Icons.Filled.RestaurantMenu),
 }
 
 /** Pantallas internas (sin barra inferior, con botón de regreso). */
@@ -81,6 +101,7 @@ fun AppPrincipal(
     val ruta = entrada?.destination?.route
     val seccion = Seccion.entries.firstOrNull { it.ruta == ruta }
     val idActual = entrada?.arguments?.getLong("id")
+    val despachador = LocalOnBackPressedDispatcherOwner.current?.onBackPressedDispatcher
 
     val inventarioVm: InventarioViewModel = viewModel { InventarioViewModel(inventario) }
     val pedidosVm: PedidosViewModel = viewModel { PedidosViewModel(pedidos) }
@@ -103,10 +124,16 @@ fun AppPrincipal(
             TopAppBar(
                 title = { Text(titulo) },
                 navigationIcon = {
-                    if (seccion == null) TextButton(onClick = { nav.popBackStack() }) { Text("← Atrás") }
+                    if (seccion == null) {
+                        // Pasa por el sistema para que cada pantalla pueda interceptarlo (ej. el editor
+                        // pregunta antes de descartar un pedido sin guardar).
+                        IconButton(onClick = { despachador?.onBackPressed() ?: nav.popBackStack() }) {
+                            Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Atrás")
+                        }
+                    }
                 },
                 actions = {
-                    if (seccion != null) TextButton(onClick = onCerrarSesion) { Text("Salir") }
+                    if (seccion != null) BotonPerfil(usuario, onCerrarSesion)
                 },
             )
         },
@@ -123,8 +150,11 @@ fun AppPrincipal(
                                     restoreState = true
                                 }
                             },
-                            icon = { Text(s.icono) },
-                            label = { Text(s.titulo) },
+                            icon = { Icon(if (s == seccion) s.iconoActivo else s.icono, contentDescription = s.titulo) },
+                            colors = NavigationBarItemDefaults.colors(
+                                selectedIconColor = MaterialTheme.colorScheme.primary,
+                                indicatorColor = MaterialTheme.colorScheme.primaryContainer,
+                            ),
                         )
                     }
                 }
@@ -133,7 +163,7 @@ fun AppPrincipal(
     ) { padding ->
         NavHost(nav, startDestination = Seccion.INICIO.ruta, modifier = Modifier.padding(padding)) {
             composable(Seccion.INICIO.ruta) {
-                InicioScreen(usuario, inventarioVm, pedidosVm, pronosticoVm, onNuevoPedido = { nav.navigate(Rutas.PEDIDO_NUEVO) })
+                InicioScreen(inventarioVm, pedidosVm, pronosticoVm, onNuevoPedido = { nav.navigate(Rutas.PEDIDO_NUEVO) })
             }
             composable(Seccion.PEDIDOS.ruta) {
                 PedidosScreen(
@@ -148,10 +178,14 @@ fun AppPrincipal(
 
             composable(Rutas.PEDIDO_NUEVO) {
                 val vm: PedidoEditorViewModel = viewModel { PedidoEditorViewModel(pedidos, null) }
-                PedidoEditorScreen(vm, onGuardado = { id ->
-                    // Al guardar se abre el detalle (para cobrar) en lugar del editor.
-                    nav.navigate(Rutas.pedido(id)) { popUpTo(Rutas.PEDIDO_NUEVO) { inclusive = true } }
-                })
+                PedidoEditorScreen(
+                    vm,
+                    onGuardado = { id ->
+                        // Al guardar se abre el detalle (para cobrar) en lugar del editor.
+                        nav.navigate(Rutas.pedido(id)) { popUpTo(Rutas.PEDIDO_NUEVO) { inclusive = true } }
+                    },
+                    onSalir = { nav.popBackStack() },
+                )
             }
             composable(Rutas.PEDIDO, listOf(navArgument("id") { type = NavType.LongType })) { e ->
                 val id = e.arguments!!.getLong("id")
@@ -164,7 +198,7 @@ fun AppPrincipal(
             composable(Rutas.PEDIDO_EDITAR, listOf(navArgument("id") { type = NavType.LongType })) { e ->
                 val id = e.arguments!!.getLong("id")
                 val vm: PedidoEditorViewModel = viewModel { PedidoEditorViewModel(pedidos, id) }
-                PedidoEditorScreen(vm, onGuardado = { nav.popBackStack() })
+                PedidoEditorScreen(vm, onGuardado = { nav.popBackStack() }, onSalir = { nav.popBackStack() })
             }
         }
     }

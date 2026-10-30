@@ -1,6 +1,5 @@
 package com.example.hamgurgueseria_monchosos.ui.pedidos
 
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -13,16 +12,17 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.material3.Card
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
 import androidx.compose.material3.ExtendedFloatingActionButton
 import androidx.compose.material3.FilterChip
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
@@ -35,6 +35,9 @@ import com.example.hamgurgueseria_monchosos.data.pedidos.EstadoPedido
 import com.example.hamgurgueseria_monchosos.data.pedidos.PedidoConTotales
 import com.example.hamgurgueseria_monchosos.ui.comun.ActualizarPeriodicamente
 import com.example.hamgurgueseria_monchosos.ui.comun.AvisoError
+import com.example.hamgurgueseria_monchosos.ui.comun.Panel
+import com.example.hamgurgueseria_monchosos.ui.comun.icono
+import com.example.hamgurgueseria_monchosos.ui.theme.Exito
 
 @Composable
 fun PedidosScreen(vm: PedidosViewModel, onNuevo: () -> Unit, onAbrir: (Long) -> Unit) {
@@ -68,7 +71,7 @@ fun PedidosScreen(vm: PedidosViewModel, onNuevo: () -> Unit, onAbrir: (Long) -> 
                 Box(Modifier.fillMaxSize().padding(32.dp), contentAlignment = Alignment.Center) {
                     Text(
                         when (s.filtro) {
-                            FiltroPedidos.POR_COBRAR -> "No hay pedidos por cobrar. 🙌"
+                            FiltroPedidos.POR_COBRAR -> "No hay pedidos por cobrar."
                             else -> "Aún no hay pedidos.\nToca \"Nuevo pedido\" para tomar uno."
                         },
                         textAlign = TextAlign.Center,
@@ -87,8 +90,10 @@ fun PedidosScreen(vm: PedidosViewModel, onNuevo: () -> Unit, onAbrir: (Long) -> 
 
         ExtendedFloatingActionButton(
             onClick = onNuevo,
+            icon = { Icon(Icons.Filled.Add, contentDescription = null) },
+            text = { Text("Nuevo pedido") },
             modifier = Modifier.align(Alignment.BottomEnd).padding(16.dp),
-        ) { Text("+ Nuevo pedido") }
+        )
     }
 }
 
@@ -96,13 +101,22 @@ fun PedidosScreen(vm: PedidosViewModel, onNuevo: () -> Unit, onAbrir: (Long) -> 
 private fun PedidoFila(p: PedidoConTotales, onClick: () -> Unit) {
     val pedido = p.pedido
     val esDeHoy = pedido.creadoEn >= inicioDelDia()
-    Card(Modifier.fillMaxWidth().clickable(onClick = onClick)) {
+    Panel(
+        Modifier.fillMaxWidth(),
+        acento = if (pedido.estado == EstadoPedido.ABIERTO) MaterialTheme.colorScheme.error else null,
+        onClick = onClick,
+    ) {
         Row(Modifier.padding(12.dp), verticalAlignment = Alignment.CenterVertically) {
+            Icon(
+                pedido.tipoEntrega.icono,
+                contentDescription = pedido.tipoEntrega.etiqueta,
+                tint = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.padding(end = 12.dp),
+            )
             Column(Modifier.weight(1f)) {
                 Text(
-                    "#${pedido.id} · ${if (esDeHoy) formatearHora(pedido.creadoEn) else formatearFechaHora(pedido.creadoEn)} · ${pedido.tipoEntrega.emoji}",
+                    "#${pedido.id} · ${if (esDeHoy) formatearHora(pedido.creadoEn) else formatearFechaHora(pedido.creadoEn)}",
                     style = MaterialTheme.typography.titleMedium,
-                    fontWeight = FontWeight.SemiBold,
                 )
                 Text(
                     listOf(pedido.cliente.ifBlank { pedido.tipoEntrega.etiqueta }, "${p.articulos} artículo${if (p.articulos == 1) "" else "s"}")
@@ -112,7 +126,7 @@ private fun PedidoFila(p: PedidoConTotales, onClick: () -> Unit) {
                 )
             }
             Column(horizontalAlignment = Alignment.End) {
-                Text(formatearCentavos(p.total), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
+                Text(formatearCentavos(p.total), style = MaterialTheme.typography.titleMedium)
                 EstadoTexto(pedido.estado, if (pedido.estado == EstadoPedido.ABIERTO && p.pagado > 0) p.pendiente else null)
             }
         }
@@ -123,7 +137,7 @@ private fun PedidoFila(p: PedidoConTotales, onClick: () -> Unit) {
 fun EstadoTexto(estado: EstadoPedido, debe: Long? = null) {
     val color = when (estado) {
         EstadoPedido.ABIERTO -> MaterialTheme.colorScheme.error
-        EstadoPedido.PAGADO -> Color(0xFF2E7D32)
+        EstadoPedido.PAGADO -> Exito
         EstadoPedido.CANCELADO -> MaterialTheme.colorScheme.onSurfaceVariant
     }
     Text(

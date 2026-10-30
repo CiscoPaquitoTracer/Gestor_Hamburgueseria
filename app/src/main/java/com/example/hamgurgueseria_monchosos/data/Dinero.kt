@@ -30,6 +30,10 @@ fun formatearHora(millis: Long): String = SimpleDateFormat("HH:mm", LOCALE_MX).f
 fun formatearFechaHora(millis: Long): String =
     SimpleDateFormat("EEE d 'de' MMM · HH:mm", LOCALE_MX).format(Date(millis))
 
+/** "viernes 30 de octubre". */
+fun formatearFechaLarga(millis: Long): String =
+    SimpleDateFormat("EEEE d 'de' MMMM", LOCALE_MX).format(Date(millis))
+
 /** Medianoche de hoy (hora del teléfono) en milisegundos. */
 fun inicioDelDia(ahora: Long = System.currentTimeMillis()): Long =
     Calendar.getInstance().apply {

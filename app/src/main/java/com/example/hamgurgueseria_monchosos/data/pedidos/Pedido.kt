@@ -1,10 +1,10 @@
 package com.example.hamgurgueseria_monchosos.data.pedidos
 
 /** [db] = valor en Supabase (ventas.tipo_entrega). */
-enum class TipoEntrega(val etiqueta: String, val emoji: String, val db: String) {
-    LOCAL("Comer aquí", "🍽️", "local"),
-    PARA_LLEVAR("Para llevar", "🥡", "para_llevar"),
-    DOMICILIO("Domicilio", "🛵", "domicilio"),
+enum class TipoEntrega(val etiqueta: String, val db: String) {
+    LOCAL("Comer aquí", "local"),
+    PARA_LLEVAR("Para llevar", "para_llevar"),
+    DOMICILIO("Domicilio", "domicilio"),
 }
 
 /** [db] = valor en Supabase (ventas.estado). El estado lo calcula la base de datos. */

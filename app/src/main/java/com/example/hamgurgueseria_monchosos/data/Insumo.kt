@@ -7,11 +7,20 @@ enum class Unidad(val etiqueta: String, val abreviatura: String, val db: String)
     LITRO("Litro", "L", "litro"),
 }
 
-/** Tipo de insumo; cada uno sugiere una unidad por defecto. [db] = valor en Supabase. */
+/**
+ * Sección del inventario, en el orden en que se muestra; cada una sugiere una unidad por defecto.
+ * [db] = valor en Supabase (migración 010).
+ */
 enum class Categoria(val etiqueta: String, val unidadSugerida: Unidad, val db: String) {
-    INGREDIENTE("Ingrediente", Unidad.KILOGRAMO, "ingrediente"),
-    DESECHABLE("Desechable", Unidad.PIEZA, "desechable"),
-    OTRO("Otro", Unidad.PIEZA, "otro"),
+    CARNES("Carnes", Unidad.KILOGRAMO, "carnes"),
+    LACTEOS("Lácteos", Unidad.KILOGRAMO, "lacteos"),
+    PANES("Panes", Unidad.PIEZA, "panes"),
+    VERDURAS("Verduras", Unidad.KILOGRAMO, "verduras"),
+    ADEREZOS("Aderezos y salsas", Unidad.LITRO, "aderezos"),
+    ABARROTES("Abarrotes", Unidad.KILOGRAMO, "abarrotes"),
+    BEBIDAS("Bebidas", Unidad.PIEZA, "bebidas"),
+    DESECHABLE("Desechables", Unidad.PIEZA, "desechable"),
+    OTRO("Otros", Unidad.PIEZA, "otro"),
 }
 
 /**

@@ -95,7 +95,7 @@ fun mensajeDeAviso(evento: Evento, porComprar: List<InsumoPorComprar>): Pair<Str
         }
         if (evento.conHistorial) append("Esperamos vender ~${evento.productosEsperados.toInt()} productos. ")
         if (porComprar.isEmpty()) {
-            append("Tus insumos alcanzan ✅")
+            append("Tus insumos alcanzan.")
         } else {
             append("Te falta: ")
             append(porComprar.take(4).joinToString(", ") { it.texto })
