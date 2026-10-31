@@ -35,7 +35,7 @@ class InventarioTest {
 
     @Test
     fun bajo_stock_solo_si_hay_minimo() {
-        val pan = Insumo(nombre = "Pan", categoria = Categoria.INGREDIENTE, unidad = Unidad.PIEZA, cantidad = 5.0)
+        val pan = Insumo(nombre = "Pan", categoria = Categoria.PANES, unidad = Unidad.PIEZA, cantidad = 5.0)
         assertFalse(pan.bajoStock)
         assertTrue(pan.copy(stockMinimo = 10.0).bajoStock)
     }

@@ -55,7 +55,14 @@ pipeline {
         }
 
         stage('Build Release') {
-            when { branch 'main' }
+            when {
+                allOf {
+                    branch 'main'
+                    // Mientras no exista la llave de release en Jenkins (docs/CI_SETUP.md, paso 3)
+                    // se omite el APK firmado en lugar de marcar el build de main como fallido.
+                    expression { hayLlaveDeRelease() }
+                }
+            }
             steps {
                 withCredentials([
                     file(credentialsId: 'android-keystore', variable: 'KEYSTORE_FILE'),
@@ -73,5 +80,16 @@ pipeline {
                     fingerprint: true
             }
         }
+    }
+}
+
+/** true si la credencial de la llave de release existe en Jenkins; si no, lo avisa en el log. */
+def hayLlaveDeRelease() {
+    try {
+        withCredentials([file(credentialsId: 'android-keystore', variable: 'KEYSTORE_FILE')]) { }
+        return true
+    } catch (err) {
+        echo 'Sin la credencial android-keystore: se omite Build Release (ver docs/CI_SETUP.md, paso 3).'
+        return false
     }
 }

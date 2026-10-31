@@ -11,15 +11,15 @@ import kotlinx.coroutines.flow.asStateFlow
  * Los precios van en CENTAVOS para no tener errores de redondeo.
  */
 /** [db] = nombre de la categoría en Supabase (tabla categorias_menu). */
-enum class CategoriaMenu(val etiqueta: String, val emoji: String, val singular: String, val db: String) {
-    BURGERS("Burgers", "🍔", "Burger", "Burgers"),
-    DOGGOS("Doggos", "🌭", "Doggo", "Doggos Jumbo"),
-    ALITAS("Alitas", "🍗", "Alitas", "Alitas"),
-    BONELESS("Boneless", "🍗", "Boneless", "Boneless"),
-    PAPAS("Papas", "🍟", "Papas", "Papas"),
-    COMBOS("Combos", "📦", "Combo", "Combos"),
-    ADEREZOS("Aderezos", "🥫", "Aderezo", "Aderezos Extra"),
-    REFRESCOS("Refrescos", "🥤", "Refresco", "Refrescos"),
+enum class CategoriaMenu(val etiqueta: String, val singular: String, val db: String) {
+    BURGERS("Burgers", "Burger", "Burgers"),
+    DOGGOS("Doggos", "Doggo", "Doggos Jumbo"),
+    ALITAS("Alitas", "Alitas", "Alitas"),
+    BONELESS("Boneless", "Boneless", "Boneless"),
+    PAPAS("Papas", "Papas", "Papas"),
+    COMBOS("Combos", "Combo", "Combos"),
+    ADEREZOS("Aderezos", "Aderezo", "Aderezos Extra"),
+    REFRESCOS("Refrescos", "Refresco", "Refrescos"),
 }
 
 /** [dbId] = id en Supabase (0 mientras no se ha cargado). */

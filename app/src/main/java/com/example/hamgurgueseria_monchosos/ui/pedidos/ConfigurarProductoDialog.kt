@@ -8,9 +8,14 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Remove
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.FilterChip
 import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
@@ -108,9 +113,11 @@ fun ConfigurarProductoDialog(
                 HorizontalDivider()
                 Row(verticalAlignment = Alignment.CenterVertically) {
                     Etiqueta("Cantidad", Modifier.weight(1f))
-                    TextButton(onClick = { if (cantidad > 1) cantidad-- }) { Text("−") }
+                    IconButton(onClick = { if (cantidad > 1) cantidad-- }, enabled = cantidad > 1) {
+                        Icon(Icons.Filled.Remove, contentDescription = "Uno menos")
+                    }
                     Text("$cantidad", style = MaterialTheme.typography.titleMedium)
-                    TextButton(onClick = { cantidad++ }) { Text("+") }
+                    IconButton(onClick = { cantidad++ }) { Icon(Icons.Filled.Add, contentDescription = "Uno más") }
                 }
 
                 OutlinedTextField(
