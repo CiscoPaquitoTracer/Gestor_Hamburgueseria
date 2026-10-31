@@ -117,6 +117,8 @@ Pipeline de [Seguridad](.github/workflows/seguridad.yml): CodeQL, mobsfscan, Git
 | Dependabot | PRs semanales a `develop` (Gradle, Actions, imágenes Docker) |
 | **Jenkins** ([`Jenkinsfile`](Jenkinsfile), [`docs/CI_SETUP.md`](docs/CI_SETUP.md)) | Corre en Docker en la laptop (`http://localhost:8081`; el 8080 lo ocupa XAMPP). Pipeline multirrama `monchosos` ya incluido (`infra/jenkins/jobs`), escanea GitHub cada 5 min, sin forks. Lint → Unit Tests → APK debug; en `main` además **Build Release** (APK/AAB firmados) y **Publicar en GitHub** (release `v1.0.N` con el APK). Sin la llave de release esas dos etapas se omiten. |
 
+**Descarga de la app:** página en [`pagina/`](pagina/index.html), publicada con GitHub Pages en https://ciscopaquitotracer.github.io/Gestor_Hamburgueseria/ (workflow [`pagina.yml`](.github/workflows/pagina.yml), solo cuando cambia `pagina/` en `main`). El botón baja `releases/latest/download/monchosos.apk`, una copia con nombre fijo que Jenkins sube a cada release, y la versión se lee de la API de GitHub. Un release nuevo no necesita republicar la página.
+
 Ramas: `francisco` (trabajo) → PR → `develop` → PR → `main`. `main` y `develop` solo por PR, sin borrar ni force-push. Commits con prefijo `[ADD]` / `[FIX]` / `[DOC]`, sin coautor.
 
 ## 7. Pendientes
