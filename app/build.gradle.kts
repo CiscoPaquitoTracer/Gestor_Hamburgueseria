@@ -59,9 +59,11 @@ android {
             if (keystore != null) {
                 signingConfig = signingConfigs.getByName("release")
             }
+            // R8 sobre toda la app. Con packageScope (solo androidx/kotlin/kotlinx, como venía en la
+            // plantilla) R8 movía clases y dejaba una heredando de otra privada de kotlin.text:
+            // el release tronaba al abrir con IllegalAccessError en WorkManagerInitializer.
             optimization {
                 enable = true
-                packageScope = setOf("androidx.**", "kotlin.**", "kotlinx.**")
             }
         }
     }
