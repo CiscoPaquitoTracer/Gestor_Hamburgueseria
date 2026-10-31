@@ -35,7 +35,7 @@ docker compose up -d --build
 
 Jenkins queda en **http://localhost:8080** (o el puerto que pongas en `JENKINS_PORT` dentro de `.env`, si el 8080 ya está ocupado, por ejemplo por XAMPP). Solo es accesible desde esa computadora, a propósito.
 
-El pipeline `monchosos` ya viene creado (`infra/jenkins/jobs/monchosos/config.xml`): revisa GitHub cada 5 minutos y solo construye ramas y PRs del propio repo, nunca de forks. Solo le falta la credencial `github-token` (paso 3). Puedes saltarte el paso 4.
+El pipeline `monchosos` ya viene creado (`infra/jenkins/jobs/monchosos/config.xml`): revisa GitHub cada 5 minutos y solo construye **`main` y los PRs** del propio repo, nunca de forks. `develop` y las ramas de trabajo no se compilan solas porque ya se prueban en su PR. Solo le falta la credencial `github-token` (paso 3). Puedes saltarte el paso 4.
 
 ## 2. Contraseña inicial
 
@@ -119,6 +119,8 @@ En GitHub, ve a **Settings → Rules** (o Branches) y edita la regla de `main` y
 | El release no se conecta a Supabase | Faltan las credenciales `supabase-url` o `supabase-publishable-key` |
 
 ## Mantenimiento
+
+- Si cambias `infra/jenkins/jobs/monchosos/config.xml`, Jenkins **no** lo toma solo, porque la imagen solo lo copia la primera vez. Cópialo y reinicia: `docker compose cp jobs/monchosos/config.xml jenkins:/var/jenkins_home/jobs/monchosos/config.xml` y `docker compose restart jenkins` (en Git Bash, con `MSYS_NO_PATHCONV=1`).
 
 - **Dependabot** abre PRs para las imágenes de `ci/` e `infra/jenkins/`. Solo actualiza el `FROM`; las versiones del SDK (`ARG`) se cambian a mano cuando cambie `compileSdk` en `app/build.gradle.kts`.
 - Para actualizar Jenkins: acepta el PR de Dependabot y luego ejecuta `docker compose up -d --build` en `infra/jenkins`. Los datos están en el volumen `jenkins_home` y no se pierden.
