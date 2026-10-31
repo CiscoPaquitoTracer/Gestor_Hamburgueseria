@@ -40,6 +40,12 @@
             <org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait>
               <strategyId>1</strategyId>
             </org.jenkinsci.plugins.github__branch__source.OriginPullRequestDiscoveryTrait>
+            <!-- Solo main (release) y los PRs. develop y francisco ya se prueban en su PR:
+                 compilarlos otra vez solo hacía fila con un único ejecutor. -->
+            <jenkins.scm.impl.trait.WildcardSCMHeadFilterTrait>
+              <includes>main PR-*</includes>
+              <excludes></excludes>
+            </jenkins.scm.impl.trait.WildcardSCMHeadFilterTrait>
           </traits>
         </source>
         <strategy class="jenkins.branch.DefaultBranchPropertyStrategy">
