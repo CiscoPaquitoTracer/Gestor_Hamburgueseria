@@ -63,6 +63,8 @@ Ve a **Manage Jenkins → Credentials → System → Global credentials → Add 
 | `supabase-publishable-key` | Secret text | Llave `sb_publishable_…`. **Nunca** la `service_role`/`secret` |
 | `github-token` | Username with password | Usuario de GitHub + *Personal Access Token* (permisos `repo` y `admin:repo_hook`) |
 
+Mientras no exista `android-keystore`, el build de `main` **omite** la etapa Build Release (lo avisa en el log) y queda en verde. En cuanto cargues la llave, el siguiente build de `main` genera el APK y el AAB firmados.
+
 ### Crear la llave de release (una sola vez)
 
 ```bash
