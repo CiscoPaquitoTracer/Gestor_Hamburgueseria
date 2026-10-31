@@ -86,7 +86,7 @@ Tablas que existen pero la app aún **no** usa: `gastos`, `compras`/`compra_deta
 
 ## 4. Configurar el inicio de sesión con Google
 
-1. En [Google Cloud Console](https://console.cloud.google.com/): pantalla de consentimiento OAuth y, en **Credenciales**, un cliente **Android** (paquete `com.example.hamgurgueseria_monchosos`, SHA-1 de `./gradlew signingReport`; otro cliente con el SHA-1 de la llave de release cuando exista) y un cliente **Aplicación web** (ese ID usa la app).
+1. En [Google Cloud Console](https://console.cloud.google.com/): pantalla de consentimiento OAuth y, en **Credenciales**, dos clientes **Android** con el paquete `com.monchosos.app` (uno con el SHA-1 de debug de `./gradlew signingReport` y otro con el de la llave de release) y un cliente **Aplicación web** (ese ID usa la app).
 2. En `local.properties` (no se sube a git):
    ```properties
    GOOGLE_WEB_CLIENT_ID=...apps.googleusercontent.com
@@ -115,7 +115,7 @@ Pipeline de [Seguridad](.github/workflows/seguridad.yml): CodeQL, mobsfscan, Git
 | [`seguridad.yml`](.github/workflows/seguridad.yml) | Análisis de seguridad (ver §5) |
 | [`imagenes-docker.yml`](.github/workflows/imagenes-docker.yml) | Construye `ci/Dockerfile` e `infra/jenkins` y compila la app dentro cuando cambian |
 | Dependabot | PRs semanales a `develop` (Gradle, Actions, imágenes Docker) |
-| **Jenkins** ([`Jenkinsfile`](Jenkinsfile), [`docs/CI_SETUP.md`](docs/CI_SETUP.md)) | Corre en Docker en la laptop (`http://localhost:8081`; el 8080 lo ocupa XAMPP). Pipeline multirrama `monchosos` ya incluido (`infra/jenkins/jobs`), escanea GitHub cada 5 min, sin forks. Lint → Unit Tests → APK debug; en `main` además **Build Release** (requiere la llave de release y credenciales en Jenkins, **pendiente**). |
+| **Jenkins** ([`Jenkinsfile`](Jenkinsfile), [`docs/CI_SETUP.md`](docs/CI_SETUP.md)) | Corre en Docker en la laptop (`http://localhost:8081`; el 8080 lo ocupa XAMPP). Pipeline multirrama `monchosos` ya incluido (`infra/jenkins/jobs`), escanea GitHub cada 5 min, sin forks. Lint → Unit Tests → APK debug; en `main` además **Build Release** (APK/AAB firmados) y **Publicar en GitHub** (release `v1.0.N` con el APK). Sin la llave de release esas dos etapas se omiten. |
 
 Ramas: `francisco` (trabajo) → PR → `develop` → PR → `main`. `main` y `develop` solo por PR, sin borrar ni force-push. Commits con prefijo `[ADD]` / `[FIX]` / `[DOC]`, sin coautor.
 
@@ -124,7 +124,7 @@ Ramas: `francisco` (trabajo) → PR → `develop` → PR → `main`. `main` y `d
 1. **Costos reales de insumos** (de `Precio.xlsx`) y **recetas reales**: hoy las recetas son de ejemplo y muchos insumos no tienen costo, así que el pronóstico de compras y la ganancia del Resumen son aproximados.
 2. **Captura de gastos y compras en la app** (las tablas ya existen) para que el Resumen muestre la ganancia completa y dejen el Excel.
 3. Más **Excels históricos** organizados por día → importar con el script.
-4. **Llave de release** + SHA-1 en Google Cloud + credenciales en Jenkins → APK firmado (CD). Distribución sugerida: GitHub Releases.
+4. **Llave de release** + SHA-1 en Google Cloud + credenciales en Jenkins → APK firmado y publicado en GitHub Releases (el pipeline ya está listo).
 5. Exigir el check de Jenkins en las reglas de `main`/`develop`.
 6. Productos/combos nuevos desde la app (hoy viven en `Menu.kt`).
 7. Diseño final, a cargo del equipo de diseño.

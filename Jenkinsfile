@@ -15,6 +15,10 @@ pipeline {
     environment {
         GRADLE_USER_HOME = "${WORKSPACE}/.gradle-home"
         GRADLE_OPTS = '-Dorg.gradle.daemon=false'
+        // Versión de la app (app/build.gradle.kts): sube con cada build para que el APK nuevo
+        // se instale como actualización. Los builds de main generan 1.0.N.
+        VERSION_CODE = "${BUILD_NUMBER}"
+        VERSION_NAME = "1.0.${BUILD_NUMBER}"
     }
 
     options {
@@ -78,6 +82,33 @@ pipeline {
                 }
                 archiveArtifacts artifacts: 'app/build/outputs/bundle/release/*.aab, app/build/outputs/apk/release/*.apk',
                     fingerprint: true
+            }
+        }
+
+        // CD: cada build de main con llave se publica como release de GitHub (tag vX.Y.N) con el
+        // APK firmado, para descargarlo e instalarlo desde el teléfono.
+        stage('Publicar en GitHub') {
+            when {
+                allOf {
+                    branch 'main'
+                    expression { hayLlaveDeRelease() }
+                }
+            }
+            steps {
+                withCredentials([usernamePassword(credentialsId: 'github-token',
+                        usernameVariable: 'GH_USUARIO', passwordVariable: 'GH_TOKEN')]) {
+                    sh '''
+                        set -eu
+                        REPO=CiscoPaquitoTracer/Gestor_Hamburgueseria
+                        APK="monchosos-$VERSION_NAME.apk"
+                        cp app/build/outputs/apk/release/app-release.apk "$APK"
+                        printf '{"tag_name": "v%s", "target_commitish": "%s", "name": "Monchosos %s", "make_latest": "true", "body": "APK firmado por Jenkins (build %s de main)."}' "$VERSION_NAME" "$GIT_COMMIT" "$VERSION_NAME" "$BUILD_NUMBER" > release-pedido.json
+                        curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" --data @release-pedido.json -o release.json "https://api.github.com/repos/$REPO/releases"
+                        ID=$(grep -m1 -o '"id": *[0-9]*' release.json | grep -o '[0-9]*$')
+                        curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/vnd.android.package-archive" --data-binary @"$APK" -o /dev/null "https://uploads.github.com/repos/$REPO/releases/$ID/assets?name=$APK"
+                        echo "Publicado: https://github.com/$REPO/releases/tag/v$VERSION_NAME"
+                    '''
+                }
             }
         }
     }

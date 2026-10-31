@@ -9,7 +9,7 @@ GitHub ──webhook──► Jenkins (infra/jenkins, Docker Compose)
                        │ usa el Docker de la computadora (docker.sock)
                        ▼
                     Contenedor de build (ci/Dockerfile: JDK 25 + Android SDK 37)
-                       └─ Jenkinsfile: Lint → Unit Tests → Build Debug → Build Release (solo main)
+                       └─ Jenkinsfile: Lint → Unit Tests → Build Debug → Build Release → Publicar en GitHub (las dos últimas solo en main)
 ```
 
 GitHub Actions **sigue funcionando en paralelo**. Las pruebas de la base de datos (Supabase) y el análisis de seguridad (CodeQL, MobSF, Gitleaks) **solo** corren en Actions.
@@ -63,7 +63,7 @@ Ve a **Manage Jenkins → Credentials → System → Global credentials → Add 
 | `supabase-publishable-key` | Secret text | Llave `sb_publishable_…`. **Nunca** la `service_role`/`secret` |
 | `github-token` | Username with password | Usuario de GitHub + *Personal Access Token* (permisos `repo` y `admin:repo_hook`) |
 
-Mientras no exista `android-keystore`, el build de `main` **omite** la etapa Build Release (lo avisa en el log) y queda en verde. En cuanto cargues la llave, el siguiente build de `main` genera el APK y el AAB firmados.
+Mientras no exista `android-keystore`, el build de `main` **omite** Build Release y Publicar en GitHub (lo avisa en el log) y queda en verde. En cuanto cargues la llave, cada build de `main` genera el APK y el AAB firmados y crea el release `v1.0.<número de build>` en GitHub con el APK. Para eso `github-token` necesita permiso de escritura en el repositorio (`repo` en un token clásico, o *Contents: Read and write* en uno fine-grained).
 
 ### Crear la llave de release (una sola vez)
 
@@ -73,7 +73,7 @@ keytool -genkeypair -v -keystore monchosos-release.jks -alias monchosos \
 ```
 
 - **Guarda el `.jks` y sus contraseñas en un lugar seguro, fuera del repositorio** (por ejemplo, un gestor de contraseñas). Si se pierde, no podrás publicar actualizaciones de la app en Play Store.
-- **Registra su SHA-1 en Google Cloud,** o el login con Google no funcionará en el release. Obtén el SHA-1 con `keytool -list -v -keystore monchosos-release.jks -alias monchosos`; luego, en Google Cloud Console → Clientes, crea **otro** cliente **Android** con el mismo paquete y ese SHA-1.
+- **Registra su SHA-1 en Google Cloud,** o el login con Google no funcionará en el release. Obtén el SHA-1 con `keytool -list -v -keystore monchosos-release.jks -alias monchosos`; luego, en Google Cloud Console → Clientes, crea **otro** cliente **Android** con el paquete `com.monchosos.app` y ese SHA-1.
 
 ## 4. Crear el pipeline
 

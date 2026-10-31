@@ -22,11 +22,14 @@ android {
     }
 
     defaultConfig {
-        applicationId = "com.example.hamgurgueseria_monchosos"
+        // Identificador en Android y Google Cloud (el código sigue en el paquete com.example…).
+        applicationId = "com.monchosos.app"
         minSdk = 24
         targetSdk = 37
-        versionCode = 1
-        versionName = "0.1.0"
+        // Jenkins los pone en cada release de main (VERSION_CODE = número de build), para que cada
+        // APK se instale como actualización del anterior. En local quedan fijos.
+        versionCode = providers.environmentVariable("VERSION_CODE").orNull?.toIntOrNull() ?: 1
+        versionName = providers.environmentVariable("VERSION_NAME").orNull ?: "0.1.0-dev"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
