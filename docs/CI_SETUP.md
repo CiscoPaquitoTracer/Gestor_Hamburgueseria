@@ -63,6 +63,8 @@ Ve a **Manage Jenkins → Credentials → System → Global credentials → Add 
 | `supabase-publishable-key` | Secret text | Llave `sb_publishable_…`. **Nunca** la `service_role`/`secret` |
 | `github-token` | Username with password | Usuario de GitHub + *Personal Access Token* (permisos `repo` y `admin:repo_hook`) |
 
+Mientras no exista `android-keystore`, el build de `main` **omite** la etapa Build Release (lo avisa en el log) y queda en verde. En cuanto cargues la llave, el siguiente build de `main` genera el APK y el AAB firmados.
+
 ### Crear la llave de release (una sola vez)
 
 ```bash
@@ -111,6 +113,7 @@ En GitHub, ve a **Settings → Rules** (o Branches) y edita la regla de `main` y
 | `permission denied` en `/var/run/docker.sock` | `DOCKER_GID` incorrecto en `.env`. Revísalo con el comando del paso 1 y ejecuta `docker compose up -d` |
 | `SDK location not found` o falta una plataforma | Los `ARG` de `ci/Dockerfile` (`ANDROID_COMPILE_SDK`, `ANDROID_BUILD_TOOLS`) no coinciden con `compileSdk` |
 | `$'\r': command not found` | `gradlew` con finales de Windows. `.gitattributes` ya lo evita; si pasa, revisa que no se haya cambiado |
+| `Gradle build daemon disappeared unexpectedly` | Se acabó la memoria de Docker por dos builds simultáneos. `infra/jenkins/init.groovy.d/ejecutores.groovy` deja un solo build a la vez; si cambiaste la imagen, ejecuta `docker compose up -d --build` |
 | El primer build tarda mucho | Normal: descarga Gradle y dependencias. Los siguientes reutilizan `.gradle-home` del workspace |
 | El release no inicia sesión con Google | Falta registrar el SHA-1 de la llave de release en Google Cloud (paso 3) |
 | El release no se conecta a Supabase | Faltan las credenciales `supabase-url` o `supabase-publishable-key` |

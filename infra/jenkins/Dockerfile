@@ -21,3 +21,5 @@ RUN jenkins-plugin-cli --plugin-file /usr/share/jenkins/ref/plugins.txt
 
 # Pipeline multirrama ya configurado (se copia a jenkins_home solo si aún no existe).
 COPY --chown=jenkins:jenkins jobs/ /usr/share/jenkins/ref/jobs/
+# Configuración que se aplica en cada arranque (un build a la vez).
+COPY --chown=jenkins:jenkins init.groovy.d/ /usr/share/jenkins/ref/init.groovy.d/
