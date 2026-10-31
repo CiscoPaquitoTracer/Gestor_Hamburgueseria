@@ -106,6 +106,9 @@ pipeline {
                         curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Accept: application/vnd.github+json" --data @release-pedido.json -o release.json "https://api.github.com/repos/$REPO/releases"
                         ID=$(grep -m1 -o '"id": *[0-9]*' release.json | grep -o '[0-9]*$')
                         curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/vnd.android.package-archive" --data-binary @"$APK" -o /dev/null "https://uploads.github.com/repos/$REPO/releases/$ID/assets?name=$APK"
+                        # Mismo APK con nombre fijo: la página de descarga (pagina/) siempre apunta a
+                        # releases/latest/download/monchosos.apk.
+                        curl -fsS -X POST -H "Authorization: Bearer $GH_TOKEN" -H "Content-Type: application/vnd.android.package-archive" --data-binary @"$APK" -o /dev/null "https://uploads.github.com/repos/$REPO/releases/$ID/assets?name=monchosos.apk"
                         echo "Publicado: https://github.com/$REPO/releases/tag/v$VERSION_NAME"
                     '''
                 }
