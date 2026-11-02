@@ -257,9 +257,9 @@ private fun DetalleContenido(p: PedidoCompleto, vm: PedidosViewModel, onEditar: 
 /** Acciones del detalle que se confirman antes de aplicarse. */
 private sealed interface Confirmacion {
     data class QuitarPago(val pago: Pago) : Confirmacion
-    data object Reabrir : Confirmacion
-    data object Cancelar : Confirmacion
-    data object Eliminar : Confirmacion
+    object Reabrir : Confirmacion
+    object Cancelar : Confirmacion
+    object Eliminar : Confirmacion
 }
 
 @Composable

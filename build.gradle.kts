@@ -14,6 +14,7 @@ buildscript {
             classpath("org.bitbucket.b_c:jose4j:0.9.7") { because("GHSA-3677-xxcr-wjqv") }
             classpath("org.jdom:jdom2:2.0.6.1") { because("GHSA-2363-cqg2-863c (XXE)") }
             classpath("org.apache.commons:commons-lang3:3.21.0") { because("GHSA-j288-q9x7-2f5v") }
+            classpath("com.google.guava:guava:33.7.2-jre") { because("GHSA-xxph-c9ww-hj94") }
         }
     }
 }
