@@ -86,6 +86,7 @@ val versionesSegurasLint = mapOf(
     "org.bouncycastle:bcutil-jdk18on" to "1.86",
     "org.apache.commons:commons-lang3" to "3.21.0",
     "org.apache.httpcomponents:httpclient" to "4.5.14",
+    "com.google.guava:guava" to "33.7.2-jre",
 )
 configurations.matching { it.name == "androidLintTool" }.configureEach {
     resolutionStrategy.eachDependency {
