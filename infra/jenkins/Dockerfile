@@ -1,6 +1,6 @@
 # Jenkins con la CLI de Docker para crear los contenedores de build (ci/Dockerfile) vía el socket del host.
 # Se usa JDK 21: la imagen lts-jdk17 dejó de actualizarse (Jenkins ya no da soporte a Java 17).
-FROM jenkins/jenkins:2.580.1-lts-jdk21
+FROM jenkins/jenkins:2.580.2-lts-jdk21
 
 USER root
 # CLI de Docker (solo el cliente) desde el repositorio oficial de Docker.
