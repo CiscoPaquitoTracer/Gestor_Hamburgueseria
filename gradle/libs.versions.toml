@@ -12,7 +12,7 @@ composeBom = "2026.09.00"
 credentials = "1.6.0"
 googleId = "1.2.1"
 supabase = "3.8.0"
-ktor = "3.6.0"
+ktor = "3.6.1"
 navigationCompose = "2.10.2"
 work = "2.12.0"
 # La librería de íconos dejó de salir en el BOM de Compose; 1.7.8 es la última versión.
