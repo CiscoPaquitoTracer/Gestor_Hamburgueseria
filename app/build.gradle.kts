@@ -1,3 +1,4 @@
+import com.android.build.api.variant.HostTestBuilder
 import java.util.Properties
 
 plugins {
@@ -74,6 +75,20 @@ android {
     buildFeatures {
         compose = true
         buildConfig = true
+    }
+    // Desde AGP 9.5 la vista previa de Compose (la que el editor configura al importar el
+    // proyecto) necesita los recursos de Android en las pruebas unitarias; sin esto falla la
+    // importación con "Android resources are excluded from unit tests".
+    testOptions {
+        unitTests.isIncludeAndroidResources = true
+    }
+}
+
+// La misma vista previa también se configura para release, donde AGP 9 no crea pruebas unitarias
+// por defecto. Solo se habilita la variante (testReleaseUnitTest); el CI sigue corriendo las de debug.
+androidComponents {
+    beforeVariants(selector().withBuildType("release")) { variante ->
+        variante.hostTests[HostTestBuilder.UNIT_TEST_TYPE]?.enable = true
     }
 }
 
