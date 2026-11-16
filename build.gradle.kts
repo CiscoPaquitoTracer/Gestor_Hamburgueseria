@@ -9,7 +9,7 @@ buildscript {
             classpath("org.bouncycastle:bcprov-jdk18on:1.86") {
                 because("GHSA-9pwp-9qqc-pr26 (crítica), GHSA-qp49-qgx5-5m26, GHSA-c3fc-8qff-9hwx")
             }
-            classpath("org.bouncycastle:bcpkix-jdk18on:1.86") { because("GHSA-wg6q-6289-32hp") }
+            classpath("org.bouncycastle:bcpkix-jdk18on:1.87") { because("GHSA-wg6q-6289-32hp") }
             classpath("org.bouncycastle:bcutil-jdk18on:1.86") { because("Alinear con bcprov") }
             classpath("org.bitbucket.b_c:jose4j:0.9.7") { because("GHSA-3677-xxcr-wjqv") }
             classpath("org.jdom:jdom2:2.0.6.1") { because("GHSA-2363-cqg2-863c (XXE)") }
