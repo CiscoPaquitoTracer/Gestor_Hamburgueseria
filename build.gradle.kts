@@ -6,7 +6,7 @@
 buildscript {
     dependencies {
         constraints {
-            classpath("org.bouncycastle:bcprov-jdk18on:1.86") {
+            classpath("org.bouncycastle:bcprov-jdk18on:1.87") {
                 because("GHSA-9pwp-9qqc-pr26 (crítica), GHSA-qp49-qgx5-5m26, GHSA-c3fc-8qff-9hwx")
             }
             classpath("org.bouncycastle:bcpkix-jdk18on:1.86") { because("GHSA-wg6q-6289-32hp") }
